@@ -1,6 +1,7 @@
 // Import required modules
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
 const errorHandler = require("./middlewares/errorHandler");
@@ -13,6 +14,7 @@ dotenv.config();
 
 // Initialize the Express app
 const app = express();
+app.use("/src/public", express.static(path.join(__dirname, "src/public")));
 
 // Middleware setup
 app.use(express.json()); // Parse JSON requests

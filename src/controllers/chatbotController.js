@@ -1,6 +1,8 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Chatbot = require("../models/Chatbot");
+const fs = require("fs");
+const path = require("path");
 
 const createChatbotWithAdmin = async (req, res) => {
   const {
@@ -257,197 +259,13 @@ const viewChatbot = async (req, res) => {
       return res.status(404).json({ details: "Chatbot not found" });
     }
 
-    // Simple chatbot HTML
-    const html = `
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-            <title>Chatbot</title>
-            <style>
-              * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-              }
-              
-              body {
-                font-family: Arial, sans-serif;
-                background-color: #f9f9f9;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-              }
-              
-              .chat-header {
-                background-color: #007bff;
-                color: white;
-                padding: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
-              }
-              
-              .chat-header h3 {
-                margin: 0;
-                font-size: 16px;
-              }
-              
-              .close-btn {
-                background: none;
-                border: none;
-                color: white;
-                font-size: 20px;
-                cursor: pointer;
-              }
-              
-              .chat-messages {
-                flex: 1;
-                padding: 15px;
-                overflow-y: auto;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                background-color: #fff;
-              }
-              
-              .message {
-                padding: 10px 15px;
-                border-radius: 18px;
-                max-width: 75%;
-                word-wrap: break-word;
-              }
-              
-              .bot-message {
-                background-color: #f0f0f0;
-                color: #333;
-                align-self: flex-start;
-              }
-              
-              .user-message {
-                background-color: #007bff;
-                color: white;
-                align-self: flex-end;
-              }
-              
-              .chat-input {
-                display: flex;
-                padding: 10px;
-                background-color: #fff;
-                border-top: 1px solid #e0e0e0;
-              }
-              
-              .chat-input input {
-                flex: 1;
-                padding: 10px 15px;
-                border: 1px solid #ddd;
-                border-radius: 20px;
-                outline: none;
-              }
-              
-              .chat-input button {
-                background-color: #007bff;
-                color: white;
-                border: none;
-                border-radius: 20px;
-                padding: 10px 15px;
-                margin-left: 10px;
-                cursor: pointer;
-              }
-              
-              .chat-footer {
-                padding: 10px;
-                text-align: center;
-                font-size: 12px;
-                color: #999;
-                background-color: #fff;
-                border-bottom-left-radius: 10px;
-                border-bottom-right-radius: 10px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="chat-header">
-              <h3>${chatbot.name || "Chatbot"}</h3>
-              <button class="close-btn" id="closeBtn">&times;</button>
-            </div>
-            
-            <div class="chat-messages" id="chatMessages">
-              <div class="message bot-message">
-                Hello! How can I help you today?
-              </div>
-            </div>
-            
-            <form class="chat-input" id="messageForm">
-              <input type="text" id="userInput" placeholder="Type your message here..." autocomplete="off">
-              <button type="submit">Send</button>
-            </form>
-            
-            <div class="chat-footer">
-              Powered by Your Company
-            </div>
-            
-            <script>
-              // Get DOM elements
-              const chatMessages = document.getElementById('chatMessages');
-              const messageForm = document.getElementById('messageForm');
-              const userInput = document.getElementById('userInput');
-              const closeBtn = document.getElementById('closeBtn');
-              
-              // Handle message submission
-              messageForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const message = userInput.value.trim();
-                if (!message) return;
-                
-                // Add user message to chat
-                addMessage(message, 'user');
-                userInput.value = '';
-                
-                // Simulate processing (replace with actual API call)
-                setTimeout(() => {
-                  // API call to your backend would go here
-                  fetch('${
-                    process.env.BASE_URL
-                  }/api/chatbots/${chatbotId}/message', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ message })
-                  })
-                  .then(response => response.json())
-                  .then(data => {
-                    addMessage(data.response || "I'm sorry, I couldn't process your request.", 'bot');
-                  })
-                  .catch(error => {
-                    console.error('Error:', error);
-                    addMessage("I'm having trouble connecting. Please try again later.", 'bot');
-                  });
-                }, 500);
-              });
-              
-              // Add message to chat
-              function addMessage(text, sender) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = \`message \${sender}-message\`;
-                messageDiv.textContent = text;
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-              }
-              
-              // Handle close button
-              closeBtn.addEventListener('click', function() {
-                window.parent.postMessage('close', '*');
-              });
-            </script>
-          </body>
-        </html>
-      `;
+    // Read the chatbot.html file
+    const filePath = path.join(__dirname, "../public/chatbot.html");
+    let html = fs.readFileSync(filePath, "utf8");
+
+    // Replace placeholders with actual chatbot data
+    html = html.replace('${chatbot.name || "Chatbot"}', chatbot.name);
+    html = html.replace("${chatbotId}", chatbotId);
 
     res.setHeader("Content-Type", "text/html");
     res.send(html);

@@ -21,17 +21,11 @@ const io = socketIo(server, {
   },
 });
 
-// Socket.io connection handling
 io.on("connection", (socket) => {
-  console.log("New client connected");
+  console.log("User connected");
 
-  socket.on("joinChat", ({ chatbotId }) => {
-    socket.join(chatbotId);
-    console.log(`User joined chatbot room: ${chatbotId}`);
-  });
-
-  socket.on("sendMessage", ({ chatbotId, text }) => {
-    io.to(chatbotId).emit("message", { text });
+  socket.on("sendMessage", (data) => {
+    io.emit("message", { text: data.text });
   });
 
   socket.on("disconnect", () => {
