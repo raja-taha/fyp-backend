@@ -8,7 +8,6 @@ configureEnvironment();
 
 connectDB();
 
-// Create HTTP server
 const server = http.createServer(app);
 
 // Setup Socket.io
