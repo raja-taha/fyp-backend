@@ -28,6 +28,10 @@ app.use(
 app.use(morgan("dev")); // Log HTTP requests
 app.use("/src/public", express.static(path.join(__dirname, "src/public")));
 
+app.get("/", (req, res) => {
+  res.send("Welcome");
+});
+
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
