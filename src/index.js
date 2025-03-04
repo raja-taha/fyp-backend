@@ -3,6 +3,8 @@ const socketIo = require("socket.io");
 const app = require("./app");
 // const configureEnvironment = require("./config/env");
 const connectDB = require("./config/db");
+const dotenv = require("dotenv");
+dotenv.config();
 
 // configureEnvironment();
 
