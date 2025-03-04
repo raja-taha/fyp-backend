@@ -7,6 +7,7 @@ const checkAndCreateSuperAdmin = require("../utils/checkAndCreateSuperAdmin");
  */
 const connectDB = async () => {
   try {
+    console.log(process.env.MONGO_URI);
     const conn = await mongoose.connect(process.env.MONGO_URI);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     // Check if superadmin exists
