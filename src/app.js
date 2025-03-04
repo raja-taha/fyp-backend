@@ -33,7 +33,7 @@ app.use(
   })
 );
 
-app.use("/api/public", express.static(path.join(__dirname, "api/public")));
+app.use("/src/public", express.static(path.join(__dirname, "src/public")));
 
 app.get("/", (req, res) => {
   res.send("Welcome");
