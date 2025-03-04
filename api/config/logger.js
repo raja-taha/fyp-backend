@@ -17,7 +17,6 @@ const logger = winston.createLogger({
     })
   ),
   transports: [
-    new winston.transports.Console(), // Log to console
     new winston.transports.File({ filename: path.join(logDir, "app.log") }), // Log to file
   ],
 });
