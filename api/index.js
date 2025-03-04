@@ -4,13 +4,10 @@ const app = require("./app");
 const configureEnvironment = require("./config/env");
 const connectDB = require("./config/db");
 
-// Load environment variables
 configureEnvironment();
 
-// Connect to the database
 connectDB();
 
-// Create HTTP server
 const server = http.createServer(app);
 
 // Setup Socket.io
