@@ -21,10 +21,6 @@ app.use(express.json()); // Parse JSON requests
 app.use(cors()); // Enable CORS for all origins
 app.use(morgan("dev")); // Log HTTP requests
 
-app.get("/", (req, res) => {
-  res.send("Welcome");
-});
-
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
