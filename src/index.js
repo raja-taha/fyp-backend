@@ -1,10 +1,10 @@
 const http = require("http");
 const socketIo = require("socket.io");
 const app = require("./app");
-const configureEnvironment = require("./config/env");
+// const configureEnvironment = require("./config/env");
 const connectDB = require("./config/db");
 
-configureEnvironment();
+// configureEnvironment();
 
 connectDB();
 
