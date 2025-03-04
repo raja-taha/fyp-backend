@@ -36,7 +36,7 @@ const isAdmin = (req, res, next) => {
     req.user = decoded;
 
     // Check if the user has the admin or superadmin role
-    if (req.user.userId !== "admin" && req.user.userId !== "superadmin") {
+    if (req.user.role !== "admin" && req.user.role !== "superadmin") {
       return res.status(403).json({ message: "Not authorized as admin" });
     }
 
@@ -62,7 +62,7 @@ const isSuperAdmin = (req, res, next) => {
     req.user = decoded;
 
     // Check if the user is a superadmin
-    if (req.user.userId !== "superadmin") {
+    if (req.user.role !== "superadmin") {
       return res.status(403).json({ message: "Not authorized as superadmin" });
     }
 
@@ -87,7 +87,7 @@ const isAgent = (req, res, next) => {
     req.user = decoded;
 
     // Check if the user has the admin or superadmin role
-    if (req.user.userId !== "agent") {
+    if (req.user.role !== "agent") {
       return res.status(403).json({ message: "Not authorized as agent" });
     }
 
