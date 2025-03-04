@@ -1,6 +1,13 @@
 const winston = require("winston");
+const fs = require("fs");
+const path = require("path");
 
-// Create a logger instance with different levels and transports
+// Ensure the logs directory exists
+const logDir = "logs";
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
+
 const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
@@ -11,9 +18,8 @@ const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.Console(), // Log to console
-    new winston.transports.File({ filename: "logs/app.log" }), // Log to file
+    new winston.transports.File({ filename: path.join(logDir, "app.log") }), // Log to file
   ],
 });
 
-// Export logger
 module.exports = logger;

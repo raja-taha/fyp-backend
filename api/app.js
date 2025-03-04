@@ -1,4 +1,3 @@
-// Import required modules
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -8,24 +7,32 @@ const errorHandler = require("./middlewares/errorHandler");
 const userRoutes = require("./routes/userRoutes");
 const clientRoutes = require("./routes/clientRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
+const logger = require("./config/logger");
 
-// Load environment variables
 dotenv.config();
-
-// Initialize the Express app
 const app = express();
 
 // Middleware setup
-app.use(express.json()); // Parse JSON requests
+app.use(express.json());
+
 app.use(
   cors({
-    origin: "*", // Change this to your frontend domain instead of "*"
+    origin: "*", // Change this to your frontend domain
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
-); // Enable CORS for all origins
-app.use(morgan("dev")); // Log HTTP requests
+);
+
+// Morgan logging with Winston
+app.use(
+  morgan("combined", {
+    stream: {
+      write: (message) => logger.info(message.trim()), // Write logs to winston
+    },
+  })
+);
+
 app.use("/api/public", express.static(path.join(__dirname, "api/public")));
 
 app.get("/", (req, res) => {
