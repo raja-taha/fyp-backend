@@ -17,7 +17,14 @@ const app = express();
 
 // Middleware setup
 app.use(express.json()); // Parse JSON requests
-app.use(cors()); // Enable CORS for all origins
+app.use(
+  cors({
+    origin: "*", // Change this to your frontend domain instead of "*"
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+); // Enable CORS for all origins
 app.use(morgan("dev")); // Log HTTP requests
 app.use("/src/public", express.static(path.join(__dirname, "src/public")));
 
