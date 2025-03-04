@@ -36,7 +36,17 @@ app.use(
 app.use("/src/public", express.static(path.join(__dirname, "src/public")));
 
 app.get("/", (req, res) => {
-  res.send("Welcome");
+  const htmlResponse = `
+    <html>
+      <head>
+        <title>NodeJs and Express on Vercel</title>
+      </head>
+      <body>
+        <h1>I am a backend project on Vercel</h1>
+      </body>
+    </html>
+  `;
+  res.send(htmlResponse);
 });
 
 // API routes
