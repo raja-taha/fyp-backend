@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 // Ensure the logs directory exists
-const logDir = "logs";
+const logDir = path.join(os.tmpdir(), 'logs');
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir);
 }
