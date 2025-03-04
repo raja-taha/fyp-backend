@@ -1,7 +1,7 @@
 {
     "functions": {
-        "api/index.js": {
-            "runtime": "nodejs18.x"
+        "src/index.js": {
+            "runtime": "nodejs22.x"
         }
     },
     "routes": [
