@@ -2,12 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const dotenv = require("dotenv");
-const morgan = require("morgan");
+// const morgan = require("morgan");
 const errorHandler = require("./middlewares/errorHandler");
 const userRoutes = require("./routes/userRoutes");
 const clientRoutes = require("./routes/clientRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
-const logger = require("./config/logger");
+// const logger = require("./config/logger");
 
 dotenv.config();
 const app = express();
