@@ -25,13 +25,13 @@ app.use(
 );
 
 // Morgan logging with Winston
-app.use(
-  morgan("combined", {
-    stream: {
-      write: (message) => logger.info(message.trim()), // Write logs to winston
-    },
-  })
-);
+// app.use(
+//   morgan("combined", {
+//     stream: {
+//       write: (message) => logger.info(message.trim()), // Write logs to winston
+//     },
+//   })
+// );
 
 app.use("/src/public", express.static(path.join(__dirname, "src/public")));
 
