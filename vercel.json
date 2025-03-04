@@ -1,13 +1,13 @@
 {
     "functions": {
-        "src/index.js": {
+        "api/index.js": {
             "runtime": "nodejs22.x"
         }
     },
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "/src/index.js"
+            "dest": "/api/index.js"
         }
     ]
 }
