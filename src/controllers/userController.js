@@ -2,26 +2,30 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../utils/generateToken");
 
-// Create Agent (Admin only)
-const createAgent = async (req, res) => {
-  const { firstName, lastName, email, username, password } = req.body;
+// Signup Agent
+const signupAgent = async (req, res) => {
+  const { firstName, lastName, email, username, password, confirmPassword } =
+    req.body;
 
-  if (!firstName || !lastName || !email || !username || !password) {
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !username ||
+    !password ||
+    !confirmPassword
+  ) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  try {
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }],
-    });
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: "Passwords do not match" });
+  }
 
+  try {
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({
-        message:
-          existingUser.email === email
-            ? "Email already in use"
-            : "Username already in use",
-      });
+      return res.status(400).json({ message: "Email already in use" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -33,23 +37,15 @@ const createAgent = async (req, res) => {
       username,
       password: hashedPassword,
       role: "agent",
-      verified: true, // Auto-verified since created by admin
+      verified: false,
       status: "Not Active",
-      createdBy: req.user.userId, // Store the admin who created this agent
     });
 
     await newAgent.save();
 
     res.status(201).json({
-      message: "Agent created successfully",
-      agent: {
-        id: newAgent._id,
-        firstName,
-        lastName,
-        email,
-        username,
-        status: newAgent.status,
-      },
+      message: "Agent signup successful. Await admin approval.",
+      agent: { firstName, lastName, email, username },
     });
   } catch (error) {
     console.error(error);
@@ -83,13 +79,12 @@ const loginUser = async (req, res) => {
     user.status = "Active";
     await user.save();
 
-    const token = generateToken(user);
+    const token = generateToken(user._id);
 
     res.status(200).json({
       message: "Login successful",
       token,
       user: {
-        id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
@@ -108,6 +103,7 @@ const loginUser = async (req, res) => {
 const logoutUser = async (req, res) => {
   try {
     const userId = req.user.userId;
+    // console.log(req);
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -125,9 +121,73 @@ const logoutUser = async (req, res) => {
   }
 };
 
+// Approve Agent
+const approveAgent = async (req, res) => {
+  const { agentId } = req.params;
+
+  try {
+    const agent = await User.findById(agentId);
+    if (!agent || agent.role !== "agent") {
+      return res.status(400).json({ message: "Agent not found" });
+    }
+
+    agent.verified = true;
+    await agent.save();
+
+    res.status(200).json({ message: "Agent approved successfully", agent });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Promote Agent to Admin
+const promoteAgent = async (req, res) => {
+  const { agentId } = req.params;
+
+  try {
+    const agent = await User.findById(agentId);
+    if (!agent) {
+      return res.status(400).json({ message: "Agent not found" });
+    }
+
+    agent.role = "admin";
+    await agent.save();
+
+    res.status(200).json({ message: "Agent promoted to admin", agent });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Demote Admin to Agent
+const demoteAdmin = async (req, res) => {
+  const { adminId } = req.params;
+
+  try {
+    const admin = await User.findById(adminId);
+    if (!admin) {
+      return res.status(400).json({ message: "Admin not found" });
+    }
+
+    if (admin.role === "superadmin") {
+      return res.status(400).json({ message: "Cannot demote superadmin" });
+    }
+
+    admin.role = "agent";
+    await admin.save();
+
+    res.status(200).json({ message: "Admin demoted to agent", admin });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // Update User Status
 const updateUserStatus = async (req, res) => {
-  const userId = req.params.userId || req.user.userId;
+  const { userId } = req.params;
   const { status } = req.body;
 
   if (!["Active", "Not Active", "Busy"].includes(status)) {
@@ -143,38 +203,56 @@ const updateUserStatus = async (req, res) => {
     user.status = status;
     await user.save();
 
-    res.status(200).json({
-      message: `Status updated to ${status}`,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        username: user.username,
-        status: user.status,
-        role: user.role,
-      },
-    });
+    res.status(200).json({ message: `Status updated to ${status}`, user });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-const getAgents = async (req, res) => {
+// Create a new admin (only accessible by superadmin)
+const createAdmin = async (req, res) => {
+  const { firstName, lastName, email, username, password, confirmPassword } =
+    req.body;
+
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !username ||
+    !password ||
+    !confirmPassword
+  ) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: "Passwords do not match" });
+  }
+
   try {
-    const adminId = req.user.userId; // Get the logged-in admin's ID
+    const existingAdmin = await Agent.findOne({ email });
+    if (existingAdmin) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
 
-    const agents = await User.find({
-      role: "agent",
-      createdBy: adminId,
-    }).select(
-      "-password" // Exclude password for security
-    );
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    res.status(200).json({
-      message: "Agents retrieved successfully",
-      agents,
+    const newAdmin = new Agent({
+      firstName,
+      lastName,
+      email,
+      username,
+      password: hashedPassword,
+      role: "admin", // Set role as admin
+      verified: true,
+    });
+
+    await newAdmin.save();
+
+    res.status(201).json({
+      message: "Admin created successfully",
+      admin: { firstName, lastName, email, username },
     });
   } catch (error) {
     console.error(error);
@@ -183,9 +261,12 @@ const getAgents = async (req, res) => {
 };
 
 module.exports = {
-  createAgent,
+  signupAgent,
   loginUser,
   logoutUser,
+  approveAgent,
+  promoteAgent,
+  demoteAdmin,
   updateUserStatus,
-  getAgents,
+  createAdmin,
 };

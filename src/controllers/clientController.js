@@ -1,23 +1,14 @@
 // controllers/clientController.js
 const Client = require("../models/Client");
-const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../utils/generateToken"); // JWT generation
 
 // Client signup
 const clientSignup = async (req, res) => {
-  const { firstName, lastName, email, password, confirmPassword, phone } =
-    req.body;
+  const { name, email, password, confirmPassword, phone } = req.body;
 
   // Validation checks
-  if (
-    !firstName ||
-    !lastName ||
-    !email ||
-    !password ||
-    !confirmPassword ||
-    !phone
-  ) {
+  if (!name || !email || !password || !confirmPassword || !phone) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -36,8 +27,7 @@ const clientSignup = async (req, res) => {
 
     // Create new client
     const newClient = new Client({
-      firstName,
-      lastName,
+      name,
       email,
       password: hashedPassword,
       phone,
@@ -50,7 +40,7 @@ const clientSignup = async (req, res) => {
     res.status(201).json({
       message: "Client created successfully",
       token,
-      client: { firstName, lastName, email, phone },
+      client: { name, email, phone },
     });
   } catch (error) {
     console.error(error);
@@ -58,71 +48,47 @@ const clientSignup = async (req, res) => {
   }
 };
 
-// ✅ Client Login & Automatic Agent Assignment
+// Client login
 const clientLogin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  const { email, password, language } = req.body;
 
-    // ✅ Find client by email
-    const client = await Client.findOne({ email }).populate(
-      "assignedAgent",
-      "username"
-    );
+  // Validation checks
+  if (!email || !password || !language) {
+    return res
+      .status(400)
+      .json({ message: "Email, password, and language are required" });
+  }
+
+  try {
+    const client = await Client.findOne({ email });
     if (!client) {
-      return res.status(404).json({ message: "Client not found" });
+      return res.status(400).json({ message: "Client not found" });
     }
 
-    // ✅ Verify password
+    // Compare passwords
     const isMatch = await bcrypt.compare(password, client.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // ✅ If client has no assigned agent, find one with the least clients
-    if (!client.assignedAgent) {
-      const agents = await User.find({ role: "agent" })
-        .sort({ clientsHandled: 1 }) // Sort by least clients
-        .limit(2); // Get top 2 agents in case of tie
+    // Generate JWT token
+    const token = generateToken(client._id);
 
-      if (agents.length === 0) {
-        return res.status(400).json({ message: "No available agents" });
-      }
-
-      // ✅ Select randomly if multiple agents have the same client count
-      const assignedAgent =
-        agents.length > 1
-          ? agents[Math.floor(Math.random() * agents.length)]
-          : agents[0];
-
-      // ✅ Assign the agent to the client
-      client.assignedAgent = assignedAgent._id;
+    // Update client's language if provided
+    if (language) {
+      client.language = language;
       await client.save();
-
-      // ✅ Increment agent's client count
-      assignedAgent.clientsHandled += 1;
-      await assignedAgent.save();
     }
 
-    // ✅ Generate JWT token
-    const token = generateToken(client);
-
-    res.json({
+    res.status(200).json({
       message: "Login successful",
+      token,
       client: {
-        id: client._id,
-        firstName: client.firstName,
-        lastName: client.lastName,
+        name: client.name,
         email: client.email,
         phone: client.phone,
         language: client.language,
-        assignedAgent: client.assignedAgent
-          ? {
-              id: client.assignedAgent._id,
-              username: client.assignedAgent.username,
-            }
-          : null,
       },
-      token,
     });
   } catch (error) {
     console.error(error);
@@ -130,33 +96,4 @@ const clientLogin = async (req, res) => {
   }
 };
 
-// ✅ Get all clients handled by agents under the admin
-const getAllClients = async (req, res) => {
-  try {
-    const adminId = req.user.userId; // Assuming admin ID is retrieved from authenticated user
-
-    // ✅ Fetch agents created by this admin
-    const agents = await User.find({ createdBy: adminId, role: "agent" });
-
-    // If no agents found under this admin
-    if (!agents.length) {
-      return res
-        .status(404)
-        .json({ message: "No agents found under this admin" });
-    }
-
-    const agentIds = agents.map((agent) => agent._id); // Extract agent IDs
-
-    // ✅ Fetch clients assigned to these agents & include agent's username
-    const clients = await Client.find({ assignedAgent: { $in: agentIds } })
-      .populate("assignedAgent", "username") // Fetch assigned agent's username only
-      .select("firstName lastName email phone language assignedAgent");
-
-    res.status(200).json({ totalClients: clients.length, clients });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-module.exports = { clientSignup, clientLogin, getAllClients };
+module.exports = { clientSignup, clientLogin };
