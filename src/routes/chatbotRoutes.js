@@ -6,6 +6,7 @@ const {
   getChatbotScript,
   viewChatbot,
   handleChatbotMessage,
+  getChatbotById,
 } = require("../controllers/chatbotController");
 const { isSuperAdmin, protect } = require("../middlewares/authMiddleware");
 
@@ -15,6 +16,7 @@ const router = express.Router();
 router.get("/widget", getChatbotWidget);
 router.get("/view", viewChatbot);
 router.post("/:chatbotId/message", handleChatbotMessage);
+router.get("/getChatbotBtId/:chatbotId", getChatbotById);
 
 // Protected Routes (Require Authentication)
 router.use(protect);
