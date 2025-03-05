@@ -20,7 +20,7 @@ app.use(
   })
 );
 
-app.use("/src/public", express.static(path.join(__dirname, "src/public")));
+app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   const htmlResponse = `

@@ -313,6 +313,26 @@ const handleChatbotMessage = async (req, res) => {
   }
 };
 
+const getChatbotById = async (req, res) => {
+  try {
+    const chatbotId = req.params.chatbotId;
+    const chatbot = await Chatbot.findById(chatbotId);
+
+    if (!chatbot) {
+      return res.status(404).json({ message: "Chatbot not found" });
+    }
+
+    res.status(200).json({
+      id: chatbot._id,
+      name: chatbot.name,
+      description: chatbot.description,
+    });
+  } catch (error) {
+    console.error("Error fetching chatbot:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createChatbotWithAdmin,
   getChatbots,
@@ -320,4 +340,5 @@ module.exports = {
   getChatbotScript,
   viewChatbot,
   handleChatbotMessage,
+  getChatbotById,
 };
