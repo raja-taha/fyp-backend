@@ -5,6 +5,7 @@ const errorHandler = require("./middlewares/errorHandler");
 const userRoutes = require("./routes/userRoutes");
 const clientRoutes = require("./routes/clientRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 
 const app = express();
 
@@ -14,7 +15,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: "*", // Change this to your frontend domain
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
@@ -36,10 +37,17 @@ app.get("/", (req, res) => {
   res.send(htmlResponse);
 });
 
+app.get("/config.js", (req, res) => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.send(`window.APP_CONFIG = { BACKEND_URL: "${process.env.VITE_PUBLIC_BACKEND_URL || "http://localhost:5000"}" };`);
+});
+
+
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/chatbots", chatbotRoutes);
+app.use("/api/chats", messageRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

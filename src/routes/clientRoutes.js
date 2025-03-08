@@ -5,6 +5,7 @@ const {
   clientSignup,
   clientLogin,
   getAllClients,
+  getClients,
 } = require("../controllers/clientController");
 const { isAdmin, protect } = require("../middlewares/authMiddleware");
 
@@ -16,6 +17,8 @@ router.post("/login", clientLogin);
 
 // ** Protected Routes (Require Authentication) **
 router.use(protect);
+
+router.get("/assigned/:agentId", getClients);
 
 router.get("/getAllClients", isAdmin, getAllClients);
 

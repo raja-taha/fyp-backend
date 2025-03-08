@@ -1,95 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot</title>
-    <link rel="stylesheet" type="text/css" href="/style.css">
-
-
-  </head>
-  <body>
-    <div class="chat-container">
-      <div class="chat-header">
-        <h3 id="chatbotName">Chatbot</h3>
-        <button class="close-btn" id="closeBtn">&times;</button>
-      </div>
-      
-      <div class="chat-messages" id="chatMessages">
-        <div class="message bot-message">Hello! How can I help you today?</div>
-      </div>
-      
-      <form class="chat-input" id="messageForm">
-        <input type="text" id="userInput" placeholder="Type your message here..." autocomplete="off">
-        <button type="submit">Send</button>
-      </form>
-      
-      <div class="chat-footer">Powered by Your Company</div>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .chatbot-container { width: 350px; border: 1px solid #ccc; border-radius: 8px; padding: 20px; }
+        .hidden { display: none; }
+        .input-field { width: 100%; padding: 8px; margin: 5px 0; }
+        .button { width: 100%; padding: 10px; background: blue; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="chatbot-container">
+        <div id="chat-screen">
+            <h3>Chatbot</h3>
+            <div id="chatbox"></div>
+            <form id="messageForm">
+                <input type="text" id="chat-input" class="input-field" placeholder="Type a message...">
+                <button type="submit" class="button">Send</button>
+            </form>
+            <button class="button" onclick="logout()" style="background: red;">Logout</button>
+        </div>
     </div>
-    
+    <script src="/config.js"></script>
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const chatMessages = document.getElementById('chatMessages');
-        const messageForm = document.getElementById('messageForm');
-        const userInput = document.getElementById('userInput');
-        const closeBtn = document.getElementById('closeBtn');
-        const chatbotNameElement = document.getElementById('chatbotName');
+        const socket = io(window.APP_CONFIG.BACKEND_URL);
+        let clientId = null;
+        let agentId = null;
 
-        // Get chatbot ID from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const chatbotId = urlParams.get('chatbot_id');
-
-        if (!chatbotId) {
-          chatbotNameElement.textContent = "Chatbot Not Found";
-          return;
+        function getCookie(name) {
+            const cookies = document.cookie.split("; ");
+            for (let cookie of cookies) {
+                let [key, value] = cookie.split("=");
+                if (key === name) return decodeURIComponent(value);
+            }
+            return null;
         }
 
-        // Fetch chatbot details dynamically
-        fetch(`/api/chatbots/getChatbotBtId/${chatbotId}`)
-          .then(response => response.json())
-          .then(data => {
-            chatbotNameElement.textContent = data.name || "Chatbot";
-          })
-          .catch(error => console.error('Error fetching chatbot details:', error));
+        document.addEventListener("DOMContentLoaded", function () {
+            const clientUserCookie = getCookie("clientUser");
+            if (clientUserCookie) {
+                try {
+                    const clientUser = JSON.parse(clientUserCookie);
+                    clientId = clientUser.id;
+                    agentId = clientUser.assignedAgent?.id || null;
+                    if (clientId && agentId) {
+                        socket.emit("joinRoom", { userId: clientId });
+                        loadChatHistory();
+                    }
+                } catch (error) {
+                    console.error("Error parsing clientUser cookie:", error);
+                }
+            }
+        });
 
-        // Handle message submission
-        messageForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          
-          const message = userInput.value.trim();
-          if (!message) return;
-          
-          addMessage(message, 'user');
-          userInput.value = '';
-          
-          try {
-            const response = await fetch(`/api/chatbots/${chatbotId}/message`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message })
+        async function loadChatHistory() {
+            if (!clientId || !agentId) return;
+            const response = await fetch(`/api/chats/messages?clientId=${clientId}&agentId=${agentId}`);
+            const chatSession = await response.json();
+
+            const chatbox = document.getElementById("chatbox");
+            chatbox.innerHTML = "";
+
+            chatSession.forEach(msg => {
+                chatbox.innerHTML += `<p><b>${msg.sender === "client" ? "You" : "Agent"}:</b> ${msg.text}</p>`;
             });
-            const data = await response.json();
-            addMessage(data.response || "I'm sorry, I couldn't process your request.", 'bot');
-          } catch (error) {
-            console.error('Error:', error);
-            addMessage("I'm having trouble connecting. Please try again later.", 'bot');
-          }
-        });
-
-        // Add message to chat
-        function addMessage(text, sender) {
-          const messageDiv = document.createElement('div');
-          messageDiv.className = `message ${sender}-message`;
-          messageDiv.textContent = text;
-          chatMessages.appendChild(messageDiv);
-          chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Handle close button
-        closeBtn.addEventListener('click', () => {
-          window.parent.postMessage('close', '*');
+        document.getElementById("messageForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const messageInput = document.getElementById("chat-input");
+            const text = messageInput.value.trim();
+            if (!text || !clientId || !agentId) return;
+
+            const messageData = { clientId, agentId, sender: "client", text };
+
+            // document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
+            messageInput.value = "";
+
+            socket.emit("sendMessage", messageData);
+            console.log(messageData);
+            
+            try {
+                await fetch("/api/chats/message", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(messageData),
+                });
+            } catch (error) {
+                console.error("Error:", error);
+            }
         });
-      });
+
+        socket.on("newMessage", (msg) => {
+            document.getElementById("chatbox").innerHTML += `<p><b>${msg.sender === "client" ? "You" : "Agent"}:</b> ${msg.text}</p>`;
+        });
     </script>
-  </body>
+</body>
 </html>

@@ -6,7 +6,9 @@ const {
   logoutUser,
   updateUserStatus,
   createAdmin,
+  verifyAdmin,
   getAgents,
+  getAdmins,
 } = require("../controllers/userController");
 
 const {
@@ -17,20 +19,18 @@ const {
 } = require("../middlewares/authMiddleware");
 
 // ** Public Routes **
-router.post("/login", loginUser); // Unified login for both agents and admins
+router.post("/login", loginUser);
+router.post("/admin/create", createAdmin); // Public route for creating admin
 
 // ** Protected Routes (Require Authentication) **
 router.use(protect);
-
-// ** Logout Route (For Both Agents & Admins) **
 router.post("/logout", logoutUser);
-
-// ** User Status Management **
-router.patch("/status", updateUserStatus); // User updates their own status
-router.patch("/status/:userId", isAdmin, updateUserStatus); // Admin updates any user's status
-
-// ** Admin Routes (Agent Management) **
+router.patch("/status", updateUserStatus);
+router.patch("/status/:userId", isAdmin, updateUserStatus);
 router.get("/agents", isAdmin, getAgents);
-router.post("/agent/create", isAdmin, createAgent); // Admin creates an agent
+router.post("/agent/create", isAdmin, createAgent);
+router.patch("/admin/verify/:adminId", isSuperAdmin, verifyAdmin); // Superadmin verifies admin
+router.get("/admins", isSuperAdmin, getAdmins);
+
 
 module.exports = router;
