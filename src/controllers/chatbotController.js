@@ -85,7 +85,7 @@ const getChatbotWidget = async (req, res) => {
   
           // Create iframe for the chatbot content
           const iframe = document.createElement("iframe");
-          iframe.src = "${process.env.BASE_URL}/api/chatbots/view?chatbot_id=${chatbotId}";
+          iframe.src = "${process.env.VITE_PUBLIC_BACKEND_URL}/api/chatbots/view?chatbot_id=${chatbotId}";
           iframe.style.width = "100%";
           iframe.style.height = "100%";
           iframe.style.border = "none";
@@ -171,7 +171,7 @@ const getChatbotScript = async (req, res) => {
         var s = document.createElement("script");
         s.type = "text/javascript";
         s.async = true;
-        s.src = "${process.env.BASE_URL}/api/chatbots/widget?chatbot_id=${chatbot._id}";
+        s.src = "${process.env.VITE_PUBLIC_BACKEND_URL}/api/chatbots/widget?chatbot_id=${chatbot._id}";
         document.head.appendChild(s);
       </script>`;
 

@@ -37,6 +37,12 @@ app.get("/", (req, res) => {
   res.send(htmlResponse);
 });
 
+app.get("/config.js", (req, res) => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.send(`window.APP_CONFIG = { BACKEND_URL: "${process.env.VITE_PUBLIC_BACKEND_URL || "http://localhost:5000"}" };`);
+});
+
+
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);

@@ -25,9 +25,9 @@
             <button class="button" onclick="logout()" style="background: red;">Logout</button>
         </div>
     </div>
-
+    <script src="/config.js"></script>
     <script>
-        const socket = io("http://localhost:5000"); // Change this to your backend URL
+        const socket = io(window.APP_CONFIG.BACKEND_URL);
         let clientId = null;
         let agentId = null;
 
@@ -78,10 +78,11 @@
 
             const messageData = { clientId, agentId, sender: "client", text };
 
-            document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
+            // document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
             messageInput.value = "";
 
             socket.emit("sendMessage", messageData);
+            console.log(messageData);
             
             try {
                 await fetch("/api/chats/message", {
