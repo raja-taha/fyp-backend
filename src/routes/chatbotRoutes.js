@@ -1,14 +1,15 @@
 const express = require("express");
 const {
-  createChatbotWithAdmin,
   getChatbots,
   getChatbotWidget,
   getChatbotScript,
   viewChatbot,
   handleChatbotMessage,
   getChatbotById,
+  createChatbot,
+  getChatbotByAdmin,
 } = require("../controllers/chatbotController");
-const { isSuperAdmin, protect } = require("../middlewares/authMiddleware");
+const { isSuperAdmin, protect, isAdmin } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -22,7 +23,9 @@ router.get("/getChatbotBtId/:chatbotId", getChatbotById);
 router.use(protect);
 router.get("/script", getChatbotScript);
 
-router.post("/create", isSuperAdmin, createChatbotWithAdmin);
+router.get("/admin-chatbot", protect, isAdmin, getChatbotByAdmin);
+
+router.post("/create", isAdmin, createChatbot);
 router.get("/", isSuperAdmin, getChatbots);
 
 module.exports = router;

@@ -4,95 +4,18 @@ const Chatbot = require("../models/Chatbot");
 const fs = require("fs");
 const path = require("path");
 
-const createChatbotWithAdmin = async (req, res) => {
-  const {
-    firstName,
-    lastName,
-    email,
-    username,
-    password,
-    confirmPassword,
-    chatbotName,
-    description,
-  } = req.body;
-
-  if (
-    !firstName ||
-    !lastName ||
-    !email ||
-    !username ||
-    !password ||
-    !confirmPassword ||
-    !chatbotName
-  ) {
-    return res.status(400).json({ message: "All fields are required" });
+const createChatbot = async (req, res) => {
+  const { chatbotName, description } = req.body;
+  if (!chatbotName) {
+    return res.status(400).json({ message: "Chatbot name is required" });
   }
-
-  if (password !== confirmPassword) {
-    return res.status(400).json({ message: "Passwords do not match" });
-  }
-
   try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message:
-          existingUser.email === email
-            ? "Email already in use"
-            : "Username already in use",
-      });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new admin
-    const newAdmin = new User({
-      firstName,
-      lastName,
-      email,
-      username,
-      password: hashedPassword,
-      role: "admin",
-      verified: true,
-      status: "Not Active",
-      createdBy: req.user.userId, // Superadmin who created this admin
-    });
-
-    await newAdmin.save();
-
-    // Create chatbot associated with admin
     const newChatbot = new Chatbot({
-      name: chatbotName,
-      createdBy: newAdmin._id,
-      description,
-      active: true,
+      name: chatbotName, description, createdBy: req.user.userId, active: true
     });
-
     await newChatbot.save();
-
-    res.status(201).json({
-      message: "Admin and Chatbot created successfully",
-      admin: {
-        id: newAdmin._id,
-        firstName,
-        lastName,
-        email,
-        username,
-        status: newAdmin.status,
-        role: newAdmin.role,
-      },
-      chatbot: {
-        id: newChatbot._id,
-        name: newChatbot.name,
-        description: newChatbot.description,
-        active: newChatbot.active,
-      },
-    });
+    res.status(201).json({ message: "Chatbot created successfully", chatbot: newChatbot });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -102,7 +25,7 @@ const getChatbots = async (req, res) => {
   try {
     const chatbots = await Chatbot.find().populate(
       "createdBy",
-      "firstName lastName email username"
+      "firstName lastName email username verified"
     );
 
     res.status(200).json(chatbots);
@@ -111,6 +34,23 @@ const getChatbots = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+const getChatbotByAdmin = async (req, res) => {
+  try {
+    const adminId = req.user.userId; // Get logged-in admin's ID
+    const chatbot = await Chatbot.findOne({ createdBy: adminId });
+
+    if (!chatbot) {
+      return res.status(404).json({ message: "No chatbot found for this admin" });
+    }
+
+    res.status(200).json(chatbot);
+  } catch (error) {
+    console.error("Error fetching chatbot:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 
 // Add this to chatbotController.js
 
@@ -334,11 +274,12 @@ const getChatbotById = async (req, res) => {
 };
 
 module.exports = {
-  createChatbotWithAdmin,
+  createChatbot,
   getChatbots,
   getChatbotWidget,
   getChatbotScript,
   viewChatbot,
   handleChatbotMessage,
   getChatbotById,
+  getChatbotByAdmin
 };

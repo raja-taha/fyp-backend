@@ -159,4 +159,16 @@ const getAllClients = async (req, res) => {
   }
 };
 
-module.exports = { clientSignup, clientLogin, getAllClients };
+const getClients = async (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const clients = await Client.find({ assignedAgent: agentId });
+
+    res.status(200).json(clients);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+}
+
+module.exports = { clientSignup, clientLogin, getAllClients, getClients };

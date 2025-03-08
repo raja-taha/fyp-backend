@@ -1,45 +1,56 @@
-// controllers/messageController.js
 const Message = require("../models/Message");
-const Agent = require("../models/Agent");
+const { getIo } = require("../socket"); // Import the socket instance
 
-// Automatically assign an available agent and send the message
-const assignAndSendMessage = async (req, res) => {
-  const { senderId, content } = req.body;
-
-  if (!senderId || !content) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
-
+// Send message
+const sendMessage = async (req, res) => {
   try {
-    // Find an available agent
-    const availableAgent = await Agent.findOne({ status: "Active" });
-    if (!availableAgent) {
-      return res
-        .status(404)
-        .json({ message: "No available agents at the moment" });
+    const { clientId, agentId, sender, text } = req.body;
+
+    if (!clientId || !agentId || !sender || !text) {
+      return res.status(400).json({ error: "All fields are required" });
     }
 
-    // Create the message
-    const message = new Message({
-      senderId,
-      receiverId: availableAgent._id,
-      content,
-    });
+    let chatSession = await Message.findOne({ clientId, agentId });
 
-    // Mark the agent as busy
-    availableAgent.status = "Busy";
-    await availableAgent.save();
-    await message.save();
+    if (!chatSession) {
+      chatSession = new Message({ clientId, agentId, messages: [] });
+    }
 
-    res.status(201).json({
-      message: "Message sent successfully",
-      assignedAgent: {
-        id: availableAgent._id,
-        name: `${availableAgent.firstName} ${availableAgent.lastName}`,
-      },
-    });
+    chatSession.messages.push({ sender, text });
+    await chatSession.save();
+
+    // Get Socket.io instance and emit messages
+    const io = getIo();
+    io.to(agentId.toString()).emit("newMessage", { clientId, agentId, sender, text });
+    io.to(clientId.toString()).emit("newMessage", { clientId, agentId, sender, text });
+
+    res.status(201).json({ message: "Message sent successfully", chatSession });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error sending message:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
+
+// Get all messages between a client and agent
+const getMessages = async (req, res) => {
+  try {
+    const { clientId, agentId } = req.query;
+
+    if (!clientId || !agentId) {
+      return res.status(400).json({ error: "Client ID and Agent ID are required" });
+    }
+
+    const chatSession = await Message.findOne({ clientId, agentId });
+
+    if (!chatSession) {
+      return res.status(404).json({ message: "No messages found" });
+    }
+
+    res.status(200).json(chatSession.messages);
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { sendMessage, getMessages };

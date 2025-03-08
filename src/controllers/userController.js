@@ -71,6 +71,10 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
+    if (user.role === "admin" && !user.verified) {
+      return res.status(400).json({ message: "Account not verified by superadmin" });
+    }
+
     if (user.role === "agent" && !user.verified) {
       return res.status(400).json({ message: "Account not verified by admin" });
     }
@@ -182,10 +186,64 @@ const getAgents = async (req, res) => {
   }
 };
 
+const createAdmin = async (req, res) => {
+  const { firstName, lastName, email, username, password, confirmPassword } = req.body;
+  if (!firstName || !lastName || !email || !username || !password || !confirmPassword) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: "Passwords do not match" });
+  }
+  try {
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email or username already in use" });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newAdmin = new User({
+      firstName, lastName, email, username, password: hashedPassword,
+      role: "admin", verified: false, status: "Not Active"
+    });
+    await newAdmin.save();
+    res.status(201).json({ message: "Admin created successfully. Awaiting verification." });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const verifyAdmin = async (req, res) => {
+  try {
+    const admin = await User.findById(req.params.adminId);
+    if (!admin || admin.role !== "admin") {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+    admin.verified = true;
+    await admin.save();
+    res.status(200).json({ message: "Admin verified successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const getAdmins = async (req, res) => {
+  try {
+    const admins = await User.find({ role: "admin" }).select(
+      "firstName lastName email username verified"
+    );
+
+    res.status(200).json({ admins });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createAgent,
   loginUser,
   logoutUser,
   updateUserStatus,
   getAgents,
+  createAdmin,
+  verifyAdmin,
+  getAdmins
 };
