@@ -9,6 +9,7 @@ const {
   verifyAdmin,
   getAgents,
   getAdmins,
+  deleteAgent,
 } = require("../controllers/userController");
 
 const {
@@ -29,8 +30,8 @@ router.patch("/status", updateUserStatus);
 router.patch("/status/:userId", isAdmin, updateUserStatus);
 router.get("/agents", isAdmin, getAgents);
 router.post("/agent/create", isAdmin, createAgent);
+router.delete("/agent/:agentId", deleteAgent);
 router.patch("/admin/verify/:adminId", isSuperAdmin, verifyAdmin); // Superadmin verifies admin
 router.get("/admins", isSuperAdmin, getAdmins);
-
 
 module.exports = router;
