@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../utils/generateToken");
+const Client = require("../models/Client");
+const Message = require("../models/Message");
 
 // Create Agent (Admin only)
 const createAgent = async (req, res) => {
@@ -72,7 +74,9 @@ const loginUser = async (req, res) => {
     }
 
     if (user.role === "admin" && !user.verified) {
-      return res.status(400).json({ message: "Account not verified by superadmin" });
+      return res
+        .status(400)
+        .json({ message: "Account not verified by superadmin" });
     }
 
     if (user.role === "agent" && !user.verified) {
@@ -187,8 +191,16 @@ const getAgents = async (req, res) => {
 };
 
 const createAdmin = async (req, res) => {
-  const { firstName, lastName, email, username, password, confirmPassword } = req.body;
-  if (!firstName || !lastName || !email || !username || !password || !confirmPassword) {
+  const { firstName, lastName, email, username, password, confirmPassword } =
+    req.body;
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !username ||
+    !password ||
+    !confirmPassword
+  ) {
     return res.status(400).json({ message: "All fields are required" });
   }
   if (password !== confirmPassword) {
@@ -197,15 +209,25 @@ const createAdmin = async (req, res) => {
   try {
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      return res.status(400).json({ message: "Email or username already in use" });
+      return res
+        .status(400)
+        .json({ message: "Email or username already in use" });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const newAdmin = new User({
-      firstName, lastName, email, username, password: hashedPassword,
-      role: "admin", verified: false, status: "Not Active"
+      firstName,
+      lastName,
+      email,
+      username,
+      password: hashedPassword,
+      role: "admin",
+      verified: false,
+      status: "Not Active",
     });
     await newAdmin.save();
-    res.status(201).json({ message: "Admin created successfully. Awaiting verification." });
+    res
+      .status(201)
+      .json({ message: "Admin created successfully. Awaiting verification." });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -237,6 +259,85 @@ const getAdmins = async (req, res) => {
   }
 };
 
+const deleteAgent = async (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const userId = req.user.userId; // Logged-in user's ID
+    const userRole = req.user.role; // Logged-in user's role
+
+    // ✅ Find the agent
+    const agent = await User.findOne({ _id: agentId, role: "agent" });
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    // ✅ Check permissions (Admin can delete their own agents, Agent can delete themselves)
+    if (userRole === "admin" && agent.createdBy.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "You can only delete your own agents" });
+    }
+    if (userRole === "agent" && agent._id.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Agents can only delete themselves" });
+    }
+
+    // ✅ Find clients assigned to this agent
+    const clients = await Client.find({ assignedAgent: agent._id });
+
+    if (clients.length > 0) {
+      // ✅ Find other available agents (least clients first)
+      const availableAgents = await User.find({
+        role: "agent",
+        _id: { $ne: agent._id },
+      })
+        .sort({ clientsHandled: 1 })
+        .limit(2);
+
+      if (availableAgents.length === 0) {
+        return res.status(400).json({
+          message:
+            "Cannot delete agent as no other agents are available to reassign clients",
+        });
+      }
+
+      // ✅ Assign each client to a new agent
+      const newAgent =
+        availableAgents.length > 1
+          ? availableAgents[Math.floor(Math.random() * availableAgents.length)]
+          : availableAgents[0];
+
+      await Client.updateMany(
+        { assignedAgent: agent._id },
+        { assignedAgent: newAgent._id }
+      );
+
+      const messages = await Message.find({ agentId: agent._id });
+
+      if (messages.length > 0) {
+        // ✅ Delete messages related to the agent
+        await Message.updateMany(
+          { agentId: agent._id },
+          { agentId: newAgent._id }
+        );
+      }
+
+      // ✅ Update new agent's client count
+      newAgent.clientsHandled += clients.length;
+      await newAgent.save();
+    }
+
+    // ✅ Delete the agent
+    await User.findByIdAndDelete(agent._id);
+
+    res.json({ message: "Agent deleted successfully and clients reassigned" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createAgent,
   loginUser,
@@ -245,5 +346,6 @@ module.exports = {
   getAgents,
   createAdmin,
   verifyAdmin,
-  getAdmins
+  getAdmins,
+  deleteAgent,
 };
