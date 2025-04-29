@@ -11,10 +11,15 @@ const createChatbot = async (req, res) => {
   }
   try {
     const newChatbot = new Chatbot({
-      name: chatbotName, description, createdBy: req.user.userId, active: true
+      name: chatbotName,
+      description,
+      createdBy: req.user.userId,
+      active: true,
     });
     await newChatbot.save();
-    res.status(201).json({ message: "Chatbot created successfully", chatbot: newChatbot });
+    res
+      .status(201)
+      .json({ message: "Chatbot created successfully", chatbot: newChatbot });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -41,7 +46,9 @@ const getChatbotByAdmin = async (req, res) => {
     const chatbot = await Chatbot.findOne({ createdBy: adminId });
 
     if (!chatbot) {
-      return res.status(404).json({ message: "No chatbot found for this admin" });
+      return res
+        .status(404)
+        .json({ message: "No chatbot found for this admin" });
     }
 
     res.status(200).json(chatbot);
@@ -50,7 +57,6 @@ const getChatbotByAdmin = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // Add this to chatbotController.js
 
@@ -183,7 +189,6 @@ const getChatbotScript = async (req, res) => {
   }
 };
 
-// Add this to view the actual chatbot interface
 const viewChatbot = async (req, res) => {
   try {
     const chatbotId = req.query.chatbot_id;
@@ -204,8 +209,11 @@ const viewChatbot = async (req, res) => {
     let html = fs.readFileSync(filePath, "utf8");
 
     // Replace placeholders with actual chatbot data
-    html = html.replace('${chatbot.name || "Chatbot"}', chatbot.name);
-    html = html.replace("${chatbotId}", chatbotId);
+    html = html.replace(
+      /\${chatbot\.name \|\| "Chatbot"}/g,
+      chatbot.name || "Chatbot"
+    );
+    html = html.replace(/\${chatbotId}/g, chatbotId);
 
     res.setHeader("Content-Type", "text/html");
     res.send(html);
@@ -281,5 +289,5 @@ module.exports = {
   viewChatbot,
   handleChatbotMessage,
   getChatbotById,
-  getChatbotByAdmin
+  getChatbotByAdmin,
 };

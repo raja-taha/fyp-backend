@@ -6,8 +6,15 @@ const generateToken = require("../utils/generateToken"); // JWT generation
 
 // Client signup
 const clientSignup = async (req, res) => {
-  const { firstName, lastName, email, password, confirmPassword, phone } =
-    req.body;
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    confirmPassword,
+    phone,
+    chatbotId,
+  } = req.body;
 
   // Validation checks
   if (
@@ -16,7 +23,8 @@ const clientSignup = async (req, res) => {
     !email ||
     !password ||
     !confirmPassword ||
-    !phone
+    !phone ||
+    !chatbotId
   ) {
     return res.status(400).json({ message: "All fields are required" });
   }
@@ -41,6 +49,7 @@ const clientSignup = async (req, res) => {
       email,
       password: hashedPassword,
       phone,
+      chatbot: chatbotId,
     });
 
     await newClient.save();
@@ -63,24 +72,30 @@ const clientLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // ✅ Find client by email
-    const client = await Client.findOne({ email }).populate(
-      "assignedAgent",
-      "username"
-    );
+    // Find client by email and populate the chatbot field to access createdBy
+    const client = await Client.findOne({ email })
+      .populate({ path: "assignedAgent", select: "username" })
+      .populate({ path: "chatbot", select: "createdBy" });
+
     if (!client) {
       return res.status(404).json({ message: "Client not found" });
     }
 
-    // ✅ Verify password
+    // Use the createdBy field from the populated chatbot as chatbotOwnerId
+    const chatbotOwnerId = client.chatbot.createdBy;
+
+    // Verify password
     const isMatch = await bcrypt.compare(password, client.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // ✅ If client has no assigned agent, find one with the least clients
+    // If client has no assigned agent, find one with the least clients
     if (!client.assignedAgent) {
-      const agents = await User.find({ role: "agent" })
+      const agents = await User.find({
+        role: "agent",
+        createdBy: chatbotOwnerId,
+      })
         .sort({ clientsHandled: 1 }) // Sort by least clients
         .limit(2); // Get top 2 agents in case of tie
 
@@ -88,22 +103,22 @@ const clientLogin = async (req, res) => {
         return res.status(400).json({ message: "No available agents" });
       }
 
-      // ✅ Select randomly if multiple agents have the same client count
+      // Select randomly if multiple agents have the same client count
       const assignedAgent =
         agents.length > 1
           ? agents[Math.floor(Math.random() * agents.length)]
           : agents[0];
 
-      // ✅ Assign the agent to the client
+      // Assign the agent to the client
       client.assignedAgent = assignedAgent._id;
       await client.save();
 
-      // ✅ Increment agent's client count
+      // Increment agent's client count
       assignedAgent.clientsHandled += 1;
       await assignedAgent.save();
     }
 
-    // ✅ Generate JWT token
+    // Generate JWT token
     const token = generateToken(client);
 
     res.json({
@@ -169,6 +184,6 @@ const getClients = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Server Error" });
   }
-}
+};
 
 module.exports = { clientSignup, clientLogin, getAllClients, getClients };

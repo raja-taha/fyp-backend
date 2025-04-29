@@ -13,6 +13,11 @@ const clientSchema = mongoose.Schema(
       ref: "User",
       default: null, // ✅ Client is assigned to an agent
     },
+    chatbot: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chatbot",
+      required: true, // The chatbot on which the client signed up
+    },
   },
   {
     timestamps: true,

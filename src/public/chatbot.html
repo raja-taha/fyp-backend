@@ -1,103 +1,365 @@
+<!-- Modified HTML (chatbot.html) -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${chatbot.name || "Chatbot"}</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .chatbot-container { width: 350px; border: 1px solid #ccc; border-radius: 8px; padding: 20px; }
-        .hidden { display: none; }
-        .input-field { width: 100%; padding: 8px; margin: 5px 0; }
-        .button { width: 100%; padding: 10px; background: blue; color: white; border: none; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <div class="chatbot-container">
-        <div id="chat-screen">
-            <h3>Chatbot</h3>
-            <div id="chatbox"></div>
-            <form id="messageForm">
-                <input type="text" id="chat-input" class="input-field" placeholder="Type a message...">
-                <button type="submit" class="button">Send</button>
-            </form>
-            <button class="button" onclick="logout()" style="background: red;">Logout</button>
-        </div>
-    </div>
-    <script src="/config.js"></script>
+    <!-- Add a script to define chatbotId globally -->
     <script>
-        const socket = io(window.APP_CONFIG.BACKEND_URL);
-        let clientId = null;
-        let agentId = null;
-
-        function getCookie(name) {
-            const cookies = document.cookie.split("; ");
-            for (let cookie of cookies) {
-                let [key, value] = cookie.split("=");
-                if (key === name) return decodeURIComponent(value);
-            }
-            return null;
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            const clientUserCookie = getCookie("clientUser");
-            if (clientUserCookie) {
-                try {
-                    const clientUser = JSON.parse(clientUserCookie);
-                    clientId = clientUser.id;
-                    agentId = clientUser.assignedAgent?.id || null;
-                    if (clientId && agentId) {
-                        socket.emit("joinRoom", { userId: clientId });
-                        loadChatHistory();
-                    }
-                } catch (error) {
-                    console.error("Error parsing clientUser cookie:", error);
-                }
-            }
-        });
-
-        async function loadChatHistory() {
-            if (!clientId || !agentId) return;
-            const response = await fetch(`/api/chats/messages?clientId=${clientId}&agentId=${agentId}`);
-            const chatSession = await response.json();
-
-            const chatbox = document.getElementById("chatbox");
-            chatbox.innerHTML = "";
-
-            chatSession.forEach(msg => {
-                chatbox.innerHTML += `<p><b>${msg.sender === "client" ? "You" : "Agent"}:</b> ${msg.text}</p>`;
-            });
-        }
-
-        document.getElementById("messageForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const messageInput = document.getElementById("chat-input");
-            const text = messageInput.value.trim();
-            if (!text || !clientId || !agentId) return;
-
-            const messageData = { clientId, agentId, sender: "client", text };
-
-            // document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
-            messageInput.value = "";
-
-            socket.emit("sendMessage", messageData);
-            console.log(messageData);
-            
-            try {
-                await fetch("/api/chats/message", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(messageData),
-                });
-            } catch (error) {
-                console.error("Error:", error);
-            }
-        });
-
-        socket.on("newMessage", (msg) => {
-            document.getElementById("chatbox").innerHTML += `<p><b>${msg.sender === "client" ? "You" : "Agent"}:</b> ${msg.text}</p>`;
-        });
+      // This will be replaced by the server with the actual chatbotId
+      window.APP_CONFIG = {
+        CHATBOT_ID: "${chatbotId}",
+        BACKEND_URL: window.location.origin
+      };
     </script>
-</body>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      .chatbot-container {
+        width: 350px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .hidden {
+        display: none;
+      }
+      .input-field {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+      }
+      .button {
+        width: 100%;
+        padding: 10px;
+        background: blue;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chatbot-container">
+      <div id="chat-screen">
+        <h3>${chatbot.name || "Chatbot"}</h3>
+        <div id="chatbox"></div>
+        <form id="messageForm">
+          <input
+            type="text"
+            id="chat-input"
+            class="input-field"
+            placeholder="Type a message..."
+          />
+          <button type="submit" class="button">Send</button>
+        </form>
+        <button class="button" onclick="logout()" style="background: red">
+          Logout
+        </button>
+      </div>
+      <div id="signup-screen" class="hidden">
+        <h3>Sign Up</h3>
+        <form id="signupForm">
+          <input
+            type="text"
+            id="signup-firstname"
+            class="input-field"
+            placeholder="First Name"
+            required
+          />
+          <input
+            type="text"
+            id="signup-lastname"
+            class="input-field"
+            placeholder="Last Name"
+            required
+          />
+          <input
+            type="email"
+            id="signup-email"
+            class="input-field"
+            placeholder="Email"
+            required
+          />
+          <input
+            type="password"
+            id="signup-password"
+            class="input-field"
+            placeholder="Password"
+            required
+          />
+          <input
+            type="password"
+            id="signup-confirm-password"
+            class="input-field"
+            placeholder="Confirm Password"
+            required
+          />
+          <input
+            type="text"
+            id="signup-phone"
+            class="input-field"
+            placeholder="Phone"
+            required
+          />
+          <button type="submit" class="button">Sign Up</button>
+        </form>
+        <button class="button" onclick="showLogin()">
+          Already have an account? Login
+        </button>
+      </div>
+      <div id="login-screen" class="hidden">
+        <h3>Login</h3>
+        <form id="loginForm">
+          <input
+            type="email"
+            id="login-email"
+            class="input-field"
+            placeholder="Email"
+            required
+          />
+          <input
+            type="password"
+            id="login-password"
+            class="input-field"
+            placeholder="Password"
+            required
+          />
+          <button type="submit" class="button">Login</button>
+        </form>
+        <button class="button" onclick="showSignup()">
+          Don't have an account? Sign Up
+        </button>
+      </div>
+    </div>
+    <script>
+      const socket = io(window.APP_CONFIG.BACKEND_URL);
+      let clientId = null;
+      let agentId = null;
+
+      function getCookie(name) {
+        const cookies = document.cookie.split("; ");
+        for (let cookie of cookies) {
+          let [key, value] = cookie.split("=");
+          if (key === name) return decodeURIComponent(value);
+        }
+        return null;
+      }
+
+      function setCookie(name, value, days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = "expires=" + date.toUTCString();
+        console.log(window);
+        const path = window.location.origin; // Set path to root for site-wide accessibility
+        document.cookie = name + "=" + value + ";" + expires + ";path=" + path;
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const clientUserCookie = getCookie("clientUser");
+        console.log(clientUserCookie);
+        if (clientUserCookie) {
+          try {
+            const clientUser = JSON.parse(clientUserCookie);
+            clientId = clientUser.id;
+            agentId = clientUser.assignedAgent?.id || null;
+            if (clientId && agentId) {
+              socket.emit("joinRoom", { userId: clientId });
+              loadChatHistory();
+              // Ensure the chat screen is displayed
+              document.getElementById("chat-screen").classList.remove("hidden");
+              document.getElementById("signup-screen").classList.add("hidden");
+              document.getElementById("login-screen").classList.add("hidden");
+            } else {
+              console.error("Invalid client or agent ID in cookie");
+              showSignup();
+            }
+          } catch (error) {
+            console.error("Error parsing clientUser cookie:", error);
+            showSignup();
+          }
+        } else {
+          showSignup();
+        }
+      });
+
+      async function loadChatHistory() {
+        if (!clientId || !agentId) return;
+        const response = await fetch(
+          `/api/chats/messages?clientId=${clientId}&agentId=${agentId}`
+        );
+        const chatSession = await response.json();
+
+        const chatbox = document.getElementById("chatbox");
+        chatbox.innerHTML = "";
+
+        if (
+          chatSession.message === "No messages found" ||
+          chatSession.length === 0
+        ) {
+          chatbox.innerHTML =
+            "<p>No messages yet. Start chatting with your agent!</p>";
+        } else {
+          chatSession.forEach((msg) => {
+            chatbox.innerHTML += `<p><b>${
+              msg.sender === "client" ? "You" : "Agent"
+            }:</b> ${msg.text}</p>`;
+          });
+        }
+
+        // Ensure the chat screen is displayed
+        document.getElementById("chat-screen").classList.remove("hidden");
+        document.getElementById("signup-screen").classList.add("hidden");
+        document.getElementById("login-screen").classList.add("hidden");
+      }
+
+      document
+        .getElementById("messageForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const messageInput = document.getElementById("chat-input");
+          const text = messageInput.value.trim();
+          if (!text || !clientId || !agentId) return;
+
+          const messageData = { clientId, agentId, sender: "client", text };
+
+          document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
+          messageInput.value = "";
+
+          socket.emit("sendMessage", messageData);
+          console.log(messageData);
+
+          try {
+            await fetch("/api/chats/message", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(messageData),
+            });
+          } catch (error) {
+            console.error("Error:", error);
+          }
+        });
+
+      socket.on("newMessage", (msg) => {
+        document.getElementById("chatbox").innerHTML += `<p><b>${
+          msg.sender === "client" ? "You" : "Agent"
+        }:</b> ${msg.text}</p>`;
+      });
+
+      function showSignup() {
+        document.getElementById("signup-screen").classList.remove("hidden");
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("chat-screen").classList.add("hidden");
+      }
+
+      function showLogin() {
+        document.getElementById("signup-screen").classList.add("hidden");
+        document.getElementById("login-screen").classList.remove("hidden");
+        document.getElementById("chat-screen").classList.add("hidden");
+      }
+
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const firstName = document
+            .getElementById("signup-firstname")
+            .value.trim();
+          const lastName = document
+            .getElementById("signup-lastname")
+            .value.trim();
+          const email = document.getElementById("signup-email").value.trim();
+          const password = document
+            .getElementById("signup-password")
+            .value.trim();
+          const confirmPassword = document
+            .getElementById("signup-confirm-password")
+            .value.trim();
+          const phone = document.getElementById("signup-phone").value.trim();
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID; // Use the properly defined chatbotId
+
+          if (!chatbotId) {
+            console.error("ChatbotId is undefined");
+            return;
+          }
+
+          const response = await fetch("/api/clients/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              firstName,
+              lastName,
+              email,
+              password,
+              confirmPassword,
+              phone,
+              chatbotId,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setCookie("clientUser", JSON.stringify(data.client), 7);
+
+            clientId = data.client.id;
+            agentId = data.client.assignedAgent?.id || null;
+
+            socket.emit("joinRoom", { userId: clientId });
+            await loadChatHistory();
+
+            document.getElementById("chat-screen").classList.remove("hidden");
+            document.getElementById("signup-screen").classList.add("hidden");
+            document.getElementById("login-screen").classList.add("hidden");
+          } else {
+            alert("Signup failed. Please try again.");
+            console.error("Signup failed", response);
+          }
+        });
+
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("login-email").value.trim();
+          const password = document
+            .getElementById("login-password")
+            .value.trim();
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID; // Use the properly defined chatbotId
+
+          const response = await fetch("/api/clients/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, chatbotId }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setCookie("clientUser", JSON.stringify(data.client), 7);
+
+            clientId = data.client.id;
+            agentId = data.client.assignedAgent?.id || null;
+
+            socket.emit("joinRoom", { userId: clientId });
+            await loadChatHistory();
+
+            document.getElementById("chat-screen").classList.remove("hidden");
+            document.getElementById("signup-screen").classList.add("hidden");
+            document.getElementById("login-screen").classList.add("hidden");
+          } else {
+            alert("Login failed. Please check your credentials.");
+            console.error("Login failed", response);
+          }
+        });
+
+      function logout() {
+        // Clear the clientUser cookie
+        document.cookie = "clientUser=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        // Redirect to the signup screen
+        showSignup();
+      }
+    </script>
+  </body>
 </html>
