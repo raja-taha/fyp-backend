@@ -3,6 +3,7 @@ const Client = require("../models/Client");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../utils/generateToken"); // JWT generation
+const mongoose = require("mongoose");
 
 // Client signup
 const clientSignup = async (req, res) => {
@@ -177,9 +178,50 @@ const getAllClients = async (req, res) => {
 const getClients = async (req, res) => {
   try {
     const { agentId } = req.params;
-    const clients = await Client.find({ assignedAgent: agentId });
 
-    res.status(200).json(clients);
+    // First get all clients for this agent
+    const clients = await Client.find({ assignedAgent: agentId }).select(
+      "_id firstName lastName email phone language"
+    );
+
+    // Get the message collections for these clients
+    const Message = require("../models/Message");
+    const clientIds = clients.map((client) => client._id);
+
+    // Find the most recent message for each client
+    const messageData = await Message.aggregate([
+      {
+        $match: {
+          clientId: { $in: clientIds },
+          agentId: new mongoose.Types.ObjectId(agentId),
+        },
+      },
+      { $unwind: "$messages" },
+      {
+        $sort: { "messages.timestamp": -1 },
+      },
+      {
+        $group: {
+          _id: "$clientId",
+          lastMessageTime: { $first: "$messages.timestamp" },
+        },
+      },
+    ]);
+
+    // Create a map of client IDs to last message times
+    const lastMessageMap = {};
+    messageData.forEach((item) => {
+      lastMessageMap[item._id.toString()] = item.lastMessageTime;
+    });
+
+    // Add the last message time to each client
+    const clientsWithLastMessage = clients.map((client) => {
+      const clientObj = client.toObject();
+      clientObj.lastMessageTime = lastMessageMap[client._id.toString()] || null;
+      return clientObj;
+    });
+
+    res.status(200).json(clientsWithLastMessage);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error" });

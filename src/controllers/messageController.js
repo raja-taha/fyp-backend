@@ -4,7 +4,7 @@ const { getIo } = require("../socket"); // Import the socket instance
 // Send message
 const sendMessage = async (req, res) => {
   try {
-    const { clientId, agentId, sender, text } = req.body;
+    const { clientId, agentId, sender, text, timestamp } = req.body;
 
     if (!clientId || !agentId || !sender || !text) {
       return res.status(400).json({ error: "All fields are required" });
@@ -16,13 +16,34 @@ const sendMessage = async (req, res) => {
       chatSession = new Message({ clientId, agentId, messages: [] });
     }
 
-    chatSession.messages.push({ sender, text });
+    // Use the provided timestamp if available, otherwise use current time
+    const messageTimestamp = timestamp ? new Date(timestamp) : new Date();
+
+    chatSession.messages.push({
+      sender,
+      text,
+      timestamp: messageTimestamp,
+    });
+
     await chatSession.save();
 
     // Get Socket.io instance and emit messages
     const io = getIo();
-    io.to(agentId.toString()).emit("newMessage", { clientId, agentId, sender, text });
-    io.to(clientId.toString()).emit("newMessage", { clientId, agentId, sender, text });
+    io.to(agentId.toString()).emit("newMessage", {
+      clientId,
+      agentId,
+      sender,
+      text,
+      timestamp: messageTimestamp,
+    });
+
+    io.to(clientId.toString()).emit("newMessage", {
+      clientId,
+      agentId,
+      sender,
+      text,
+      timestamp: messageTimestamp,
+    });
 
     res.status(201).json({ message: "Message sent successfully", chatSession });
   } catch (error) {
@@ -37,7 +58,9 @@ const getMessages = async (req, res) => {
     const { clientId, agentId } = req.query;
 
     if (!clientId || !agentId) {
-      return res.status(400).json({ error: "Client ID and Agent ID are required" });
+      return res
+        .status(400)
+        .json({ error: "Client ID and Agent ID are required" });
     }
 
     const chatSession = await Message.findOne({ clientId, agentId });

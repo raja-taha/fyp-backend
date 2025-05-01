@@ -224,7 +224,13 @@
           const text = messageInput.value.trim();
           if (!text || !clientId || !agentId) return;
 
-          const messageData = { clientId, agentId, sender: "client", text };
+          const messageData = { 
+            clientId, 
+            agentId, 
+            sender: "client", 
+            text,
+            timestamp: new Date().toISOString() 
+          };
 
           document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
           messageInput.value = "";

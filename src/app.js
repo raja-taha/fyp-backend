@@ -6,6 +6,7 @@ const userRoutes = require("./routes/userRoutes");
 const clientRoutes = require("./routes/clientRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
@@ -39,15 +40,19 @@ app.get("/", (req, res) => {
 
 app.get("/config.js", (req, res) => {
   res.setHeader("Content-Type", "application/javascript");
-  res.send(`window.APP_CONFIG = { BACKEND_URL: "${process.env.VITE_PUBLIC_BACKEND_URL || "http://localhost:5000"}" };`);
+  res.send(
+    `window.APP_CONFIG = { BACKEND_URL: "${
+      process.env.VITE_PUBLIC_BACKEND_URL || "http://localhost:5000"
+    }" };`
+  );
 });
-
 
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/chatbots", chatbotRoutes);
 app.use("/api/chats", messageRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
