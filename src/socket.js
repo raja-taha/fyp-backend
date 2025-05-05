@@ -1,4 +1,5 @@
 const socketIo = require("socket.io");
+const Message = require("./models/Message");
 
 let io;
 
@@ -15,6 +16,37 @@ const initializeSocket = (server) => {
 
     socket.on("joinRoom", ({ userId }) => {
       socket.join(userId);
+    });
+
+    socket.on("sendMessage", async (messageData) => {
+      console.log("Message received:", messageData);
+
+      try {
+        // Save message to database
+        const { clientId, agentId, sender, text, timestamp } = messageData;
+
+        let chatSession = await Message.findOne({ clientId, agentId });
+        if (!chatSession) {
+          chatSession = new Message({ clientId, agentId, messages: [] });
+        }
+
+        // Use the provided timestamp if available, otherwise use current time
+        const messageTimestamp = timestamp ? new Date(timestamp) : new Date();
+
+        chatSession.messages.push({
+          sender,
+          text,
+          timestamp: messageTimestamp,
+        });
+
+        await chatSession.save();
+
+        // Forward the message to both client and agent rooms
+        io.to(agentId.toString()).emit("newMessage", messageData);
+        io.to(clientId.toString()).emit("newMessage", messageData);
+      } catch (error) {
+        console.error("Error saving message:", error);
+      }
     });
 
     socket.on("disconnect", () => {

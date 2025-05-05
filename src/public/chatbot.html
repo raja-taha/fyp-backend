@@ -232,21 +232,16 @@
             timestamp: new Date().toISOString() 
           };
 
-          document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
+          // Clear input field
           messageInput.value = "";
 
+          // Send the message via socket.io
           socket.emit("sendMessage", messageData);
-          console.log(messageData);
+          console.log("Message sent:", messageData);
 
-          try {
-            await fetch("/api/chats/message", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(messageData),
-            });
-          } catch (error) {
-            console.error("Error:", error);
-          }
+          // No need to make a separate fetch POST request
+          // The server socket handler will broadcast the message
+          // and we'll see it via the newMessage event
         });
 
       socket.on("newMessage", (msg) => {
