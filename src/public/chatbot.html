@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${chatbot.name || "Chatbot"}</title>
+    <title>${chatbot.name || "LinguistLink"}</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <!-- Add a script to define chatbotId globally -->
     <script>
@@ -14,131 +14,216 @@
         BACKEND_URL: window.location.origin
       };
     </script>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-      }
-      .chatbot-container {
-        width: 350px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        padding: 20px;
-      }
-      .hidden {
-        display: none;
-      }
-      .input-field {
-        width: 100%;
-        padding: 8px;
-        margin: 5px 0;
-      }
-      .button {
-        width: 100%;
-        padding: 10px;
-        background: blue;
-        color: white;
-        border: none;
-        cursor: pointer;
-      }
-    </style>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </head>
   <body>
     <div class="chatbot-container">
-      <div id="chat-screen">
-        <h3>${chatbot.name || "Chatbot"}</h3>
+      <!-- Chat Screen -->
+      <div id="chat-screen" class="hidden">
+        <div class="header">
+          <div class="logo">
+            <img src="/robot-logo.svg" alt="Logo">
+            <span id="chatbot-name"></span>
+            <span id="user-language" class="language-badge"></span>
+          </div>
+          <button class="close-btn">&times;</button>
+        </div>
         <div id="chatbox"></div>
-        <form id="messageForm">
+        <form id="message-form">
           <input
             type="text"
             id="chat-input"
-            class="input-field"
-            placeholder="Type a message..."
+            placeholder="Type your message here..."
           />
-          <button type="submit" class="button">Send</button>
+          <button type="submit" id="send-button">
+            <i class="fas fa-paper-plane"></i>
+          </button>
         </form>
-        <button class="button" onclick="logout()" style="background: red">
-          Logout
-        </button>
       </div>
+
+      <!-- Login Screen -->
+      <div id="login-screen">
+        <div class="header">
+          <div class="logo">
+            <img src="/robot-logo.svg" alt="Logo">
+            <span id="login-chatbot-name"></span>
+          </div>
+          <button class="close-btn">&times;</button>
+        </div>
+        <div class="login-container">
+          <h2>Login</h2>
+          <div class="language-selector">
+            <label for="language">Select Language:</label>
+            <select id="language" class="input-field">
+              <option value="english">English</option>
+              <option value="spanish">Spanish</option>
+              <option value="french">French</option>
+              <option value="chinese">Chinese</option>
+              <option value="hindi">Hindi</option>
+              <option value="arabic">Arabic</option>
+              <option value="portuguese">Portuguese</option>
+              <option value="bengali">Bengali</option>
+              <option value="russian">Russian</option>
+              <option value="japanese">Japanese</option>
+              <option value="german">German</option>
+              <option value="korean">Korean</option>
+              <option value="italian">Italian</option>
+              <option value="turkish">Turkish</option>
+              <option value="urdu">Urdu</option>
+            </select>
+          </div>
+          <form id="loginForm">
+            <input
+              type="email"
+              id="login-email"
+              class="input-field"
+              placeholder="Email"
+              required
+            />
+            <input
+              type="password"
+              id="login-password"
+              class="input-field"
+              placeholder="Password"
+              required
+            />
+            <button type="submit" class="button">Login</button>
+          </form>
+          <p class="link-text">
+            Don't have an account? <a class="link" onclick="showSignup()">Sign Up</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Signup Screen -->
       <div id="signup-screen" class="hidden">
-        <h3>Sign Up</h3>
-        <form id="signupForm">
-          <input
-            type="text"
-            id="signup-firstname"
-            class="input-field"
-            placeholder="First Name"
-            required
-          />
-          <input
-            type="text"
-            id="signup-lastname"
-            class="input-field"
-            placeholder="Last Name"
-            required
-          />
-          <input
-            type="email"
-            id="signup-email"
-            class="input-field"
-            placeholder="Email"
-            required
-          />
-          <input
-            type="password"
-            id="signup-password"
-            class="input-field"
-            placeholder="Password"
-            required
-          />
-          <input
-            type="password"
-            id="signup-confirm-password"
-            class="input-field"
-            placeholder="Confirm Password"
-            required
-          />
-          <input
-            type="text"
-            id="signup-phone"
-            class="input-field"
-            placeholder="Phone"
-            required
-          />
-          <button type="submit" class="button">Sign Up</button>
-        </form>
-        <button class="button" onclick="showLogin()">
-          Already have an account? Login
-        </button>
-      </div>
-      <div id="login-screen" class="hidden">
-        <h3>Login</h3>
-        <form id="loginForm">
-          <input
-            type="email"
-            id="login-email"
-            class="input-field"
-            placeholder="Email"
-            required
-          />
-          <input
-            type="password"
-            id="login-password"
-            class="input-field"
-            placeholder="Password"
-            required
-          />
-          <button type="submit" class="button">Login</button>
-        </form>
-        <button class="button" onclick="showSignup()">
-          Don't have an account? Sign Up
-        </button>
+        <div class="header">
+          <div class="logo">
+            <img src="/robot-logo.svg" alt="Logo">
+            <span id="signup-chatbot-name"></span>
+          </div>
+          <button class="close-btn">&times;</button>
+        </div>
+        <div class="signup-container">
+          <h2>Signup</h2>
+          <div class="language-selector">
+            <label for="signup-language">Select Language:</label>
+            <select id="signup-language" class="input-field">
+              <option value="english">English</option>
+              <option value="spanish">Spanish</option>
+              <option value="french">French</option>
+              <option value="chinese">Chinese</option>
+              <option value="hindi">Hindi</option>
+              <option value="arabic">Arabic</option>
+              <option value="portuguese">Portuguese</option>
+              <option value="bengali">Bengali</option>
+              <option value="russian">Russian</option>
+              <option value="japanese">Japanese</option>
+              <option value="german">German</option>
+              <option value="korean">Korean</option>
+              <option value="italian">Italian</option>
+              <option value="turkish">Turkish</option>
+              <option value="urdu">Urdu</option>
+            </select>
+          </div>
+          <form id="signupForm">
+            <input
+              type="email"
+              id="signup-email"
+              class="input-field"
+              placeholder="Email"
+              required
+            />
+            <input
+              type="text"
+              id="signup-firstname"
+              class="input-field"
+              placeholder="First Name"
+              required
+            />
+            <input
+              type="text"
+              id="signup-lastname"
+              class="input-field"
+              placeholder="Last Name"
+              required
+            />
+            <input
+              type="password"
+              id="signup-password"
+              class="input-field"
+              placeholder="Password"
+              required
+            />
+            <input
+              type="password"
+              id="signup-confirm-password"
+              class="input-field"
+              placeholder="Confirm Password"
+              required
+            />
+            <input
+              type="text"
+              id="signup-phone"
+              class="input-field"
+              placeholder="Phone Number"
+              required
+            />
+            <button type="submit" class="button">Signup</button>
+          </form>
+          <p class="link-text">
+            Already have an account? <a class="link" onclick="showLogin()">Login</a>
+          </p>
+        </div>
       </div>
     </div>
+
     <script>
       const socket = io(window.APP_CONFIG.BACKEND_URL);
       let clientId = null;
       let agentId = null;
+      let currentLanguage = "english"; // Default language
+      let chatbotName = "LinguistLink"; // Default name until we fetch the real one
+
+      function getStoredData(key) {
+        try {
+          return JSON.parse(localStorage.getItem(key));
+        } catch (error) {
+          console.error(`Error retrieving ${key} from localStorage:`, error);
+          return null;
+        }
+      }
+
+      function storeData(key, value) {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (error) {
+          console.error(`Error storing ${key} in localStorage:`, error);
+        }
+      }
+
+      // For backward compatibility - migrate any existing cookies to localStorage
+      function migrateFromCookies() {
+        const clientUserCookie = getCookie("clientUser");
+        const savedLanguage = getCookie("clientLanguage");
+        
+        if (clientUserCookie && !getStoredData("clientUser")) {
+          try {
+            storeData("clientUser", JSON.parse(clientUserCookie));
+            // Clear the old cookie
+            document.cookie = "clientUser=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          } catch (e) {
+            console.error("Error migrating client user cookie:", e);
+          }
+        }
+        
+        if (savedLanguage && !getStoredData("clientLanguage")) {
+          storeData("clientLanguage", savedLanguage);
+          // Clear the old cookie
+          document.cookie = "clientLanguage=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        }
+      }
 
       function getCookie(name) {
         const cookies = document.cookie.split("; ");
@@ -150,39 +235,76 @@
       }
 
       function setCookie(name, value, days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        const expires = "expires=" + date.toUTCString();
-        console.log(window);
-        const path = window.location.origin; // Set path to root for site-wide accessibility
-        document.cookie = name + "=" + value + ";" + expires + ";path=" + path;
+        // Store in localStorage instead
+        storeData(name, value);
+      }
+
+      // Fetch chatbot details and set name
+      async function fetchChatbotName() {
+        try {
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID;
+          if (!chatbotId || chatbotId.includes("${")) {
+            console.error("Invalid chatbotId format:", chatbotId);
+            return;
+          }
+          
+          const response = await fetch(`/api/chatbots/public/${chatbotId}`);
+          if (response.ok) {
+            const data = await response.json();
+            chatbotName = data.name || "LinguistLink";
+            setChatbotName();
+          } else {
+            console.error("Failed to fetch chatbot details");
+          }
+        } catch (error) {
+          console.error("Error fetching chatbot details:", error);
+        }
       }
 
       document.addEventListener("DOMContentLoaded", function () {
-        const clientUserCookie = getCookie("clientUser");
-        console.log(clientUserCookie);
-        if (clientUserCookie) {
+        // Migrate any existing cookies to localStorage
+        migrateFromCookies();
+        
+        // Fetch and set chatbot name
+        fetchChatbotName();
+        setChatbotName(); // Set default name initially
+        
+        const clientUser = getStoredData("clientUser");
+        const savedLanguage = getStoredData("clientLanguage") || "english";
+        currentLanguage = savedLanguage;
+        
+        // Set the language badge in the header
+        updateLanguageBadge(currentLanguage);
+        
+        // Set the language dropdown values
+        if (document.getElementById("language")) {
+          document.getElementById("language").value = savedLanguage;
+        }
+        if (document.getElementById("signup-language")) {
+          document.getElementById("signup-language").value = savedLanguage;
+        }
+        
+        if (clientUser) {
           try {
-            const clientUser = JSON.parse(clientUserCookie);
             clientId = clientUser.id;
             agentId = clientUser.assignedAgent?.id || null;
             if (clientId && agentId) {
-              socket.emit("joinRoom", { userId: clientId });
+              socket.emit("joinRoom", { userId: clientId, language: savedLanguage });
               loadChatHistory();
               // Ensure the chat screen is displayed
               document.getElementById("chat-screen").classList.remove("hidden");
               document.getElementById("signup-screen").classList.add("hidden");
               document.getElementById("login-screen").classList.add("hidden");
             } else {
-              console.error("Invalid client or agent ID in cookie");
-              showSignup();
+              console.error("Invalid client or agent ID in stored data");
+              showLogin();
             }
           } catch (error) {
-            console.error("Error parsing clientUser cookie:", error);
-            showSignup();
+            console.error("Error parsing stored client user data:", error);
+            showLogin();
           }
         } else {
-          showSignup();
+          showLogin();
         }
       });
 
@@ -201,23 +323,58 @@
           chatSession.length === 0
         ) {
           chatbox.innerHTML =
-            "<p>No messages yet. Start chatting with your agent!</p>";
+            "<p class='no-messages'>No messages yet. Start chatting with your agent!</p>";
         } else {
+          // Group messages by date
+          const messagesByDate = {};
+          const today = new Date().toDateString();
+          
           chatSession.forEach((msg) => {
-            chatbox.innerHTML += `<p><b>${
-              msg.sender === "client" ? "You" : "Agent"
-            }:</b> ${msg.text}</p>`;
+            const msgDate = new Date(msg.timestamp).toDateString();
+            if (!messagesByDate[msgDate]) {
+              messagesByDate[msgDate] = [];
+            }
+            messagesByDate[msgDate].push(msg);
           });
+          
+          // Sort dates in chronological order
+          const sortedDates = Object.keys(messagesByDate).sort((a, b) => 
+            new Date(a) - new Date(b)
+          );
+          
+          // Render messages grouped by date
+          sortedDates.forEach(date => {
+            // Add date separator
+            const dateDisplay = date === today ? "Today" : formatDateSeparator(date);
+            chatbox.innerHTML += `<div class="date-separator" data-date="${date}"><span>${dateDisplay}</span></div>`;
+            
+            // Add messages for this date
+            messagesByDate[date].forEach(msg => {
+              const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              const messageClass = msg.sender === "client" ? "client-message" : "agent-message";
+              chatbox.innerHTML += `
+                <div class="message ${messageClass}">
+                  ${msg.text}
+                  <span class="message-time">${time}</span>
+                </div>
+              `;
+            });
+          });
+          
+          // Scroll to bottom of chat
+          chatbox.scrollTop = chatbox.scrollHeight;
         }
+      }
 
-        // Ensure the chat screen is displayed
-        document.getElementById("chat-screen").classList.remove("hidden");
-        document.getElementById("signup-screen").classList.add("hidden");
-        document.getElementById("login-screen").classList.add("hidden");
+      // Format date for separator
+      function formatDateSeparator(dateString) {
+        const date = new Date(dateString);
+        const options = { weekday: 'short', month: 'short', day: 'numeric' };
+        return date.toLocaleDateString(undefined, options);
       }
 
       document
-        .getElementById("messageForm")
+        .getElementById("message-form")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
           const messageInput = document.getElementById("chat-input");
@@ -245,42 +402,86 @@
         });
 
       socket.on("newMessage", (msg) => {
-        document.getElementById("chatbox").innerHTML += `<p><b>${
-          msg.sender === "client" ? "You" : "Agent"
-        }:</b> ${msg.text}</p>`;
+        const chatbox = document.getElementById("chatbox");
+        
+        // Remove the "no messages" message if it exists
+        const noMessagesElement = chatbox.querySelector('.no-messages');
+        if (noMessagesElement) {
+          noMessagesElement.remove();
+        }
+        
+        const msgDate = new Date(msg.timestamp).toDateString();
+        const today = new Date().toDateString();
+        
+        // Check if we need to add a date separator by looking for existing one with same date
+        const existingSeparator = chatbox.querySelector(`.date-separator[data-date="${msgDate}"]`);
+        
+        if (!existingSeparator) {
+          const dateDisplay = msgDate === today ? "Today" : formatDateSeparator(msgDate);
+          chatbox.innerHTML += `<div class="date-separator" data-date="${msgDate}"><span>${dateDisplay}</span></div>`;
+        }
+        
+        const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const messageClass = msg.sender === "client" ? "client-message" : "agent-message";
+        
+        chatbox.innerHTML += `
+          <div class="message ${messageClass}">
+            ${msg.text}
+            <span class="message-time">${time}</span>
+          </div>
+          
+        `;
+        
+        // Scroll to bottom after new message
+        chatbox.scrollTop = chatbox.scrollHeight;
       });
 
       function showSignup() {
+        // Transfer the selected language from login to signup
+        const loginLanguage = document.getElementById("language").value;
         document.getElementById("signup-screen").classList.remove("hidden");
         document.getElementById("login-screen").classList.add("hidden");
         document.getElementById("chat-screen").classList.add("hidden");
+        
+        // Set the language dropdown to match the login screen
+        document.getElementById("signup-language").value = loginLanguage;
       }
 
       function showLogin() {
+        // Transfer the selected language from signup to login
+        const signupLanguage = document.getElementById("signup-language")?.value;
         document.getElementById("signup-screen").classList.add("hidden");
         document.getElementById("login-screen").classList.remove("hidden");
         document.getElementById("chat-screen").classList.add("hidden");
+        
+        // Set the language dropdown to match the signup screen if it exists
+        if (signupLanguage) {
+          document.getElementById("language").value = signupLanguage;
+        }
       }
 
       document
         .getElementById("signupForm")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
-          const firstName = document
-            .getElementById("signup-firstname")
-            .value.trim();
-          const lastName = document
-            .getElementById("signup-lastname")
-            .value.trim();
           const email = document.getElementById("signup-email").value.trim();
-          const password = document
-            .getElementById("signup-password")
-            .value.trim();
-          const confirmPassword = document
-            .getElementById("signup-confirm-password")
-            .value.trim();
+          const firstName = document.getElementById("signup-firstname").value.trim();
+          const lastName = document.getElementById("signup-lastname").value.trim();
+          const password = document.getElementById("signup-password").value.trim();
+          const confirmPassword = document.getElementById("signup-confirm-password").value.trim();
           const phone = document.getElementById("signup-phone").value.trim();
-          const chatbotId = window.APP_CONFIG.CHATBOT_ID; // Use the properly defined chatbotId
+          const language = document.getElementById("signup-language").value;
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID;
+
+          if (!firstName || !lastName || !email || !password || !confirmPassword || !phone || !chatbotId) {
+            alert("All fields are required");
+            return;
+          }
+
+          if (password !== confirmPassword) {
+            alert("Passwords do not match");
+            return;
+          }
 
           if (!chatbotId) {
             console.error("ChatbotId is undefined");
@@ -298,25 +499,34 @@
               confirmPassword,
               phone,
               chatbotId,
+              language,
             }),
           });
 
           if (response.ok) {
-            const data = await response.json();
-            setCookie("clientUser", JSON.stringify(data.client), 7);
-
-            clientId = data.client.id;
-            agentId = data.client.assignedAgent?.id || null;
-
-            socket.emit("joinRoom", { userId: clientId });
-            await loadChatHistory();
-
-            document.getElementById("chat-screen").classList.remove("hidden");
-            document.getElementById("signup-screen").classList.add("hidden");
-            document.getElementById("login-screen").classList.add("hidden");
+            // Store the language preference but don't auto-login
+            storeData("clientLanguage", language);
+            
+            // Clear signup form
+            document.getElementById("signup-email").value = "";
+            document.getElementById("signup-firstname").value = "";
+            document.getElementById("signup-lastname").value = "";
+            document.getElementById("signup-password").value = "";
+            document.getElementById("signup-confirm-password").value = "";
+            document.getElementById("signup-phone").value = "";
+            
+            // Show success message and redirect to login
+            alert("Signup successful! Please login with your credentials.");
+            
+            // Populate the login email field with the email they just registered with
+            document.getElementById("login-email").value = email;
+            
+            // Redirect to login screen
+            showLogin();
           } else {
-            alert("Signup failed. Please try again.");
-            console.error("Signup failed", response);
+            const error = await response.json();
+            alert(error.message || "Signup failed. Please try again.");
+            console.error("Signup failed", error);
           }
         });
 
@@ -325,25 +535,27 @@
         .addEventListener("submit", async (e) => {
           e.preventDefault();
           const email = document.getElementById("login-email").value.trim();
-          const password = document
-            .getElementById("login-password")
-            .value.trim();
-          const chatbotId = window.APP_CONFIG.CHATBOT_ID; // Use the properly defined chatbotId
+          const password = document.getElementById("login-password").value.trim();
+          const language = document.getElementById("language").value;
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID;
 
           const response = await fetch("/api/clients/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, chatbotId }),
+            body: JSON.stringify({ email, password, chatbotId, language }),
           });
 
           if (response.ok) {
             const data = await response.json();
-            setCookie("clientUser", JSON.stringify(data.client), 7);
+            storeData("clientUser", data.client);
+            storeData("clientLanguage", language);
+            currentLanguage = language;
+            updateLanguageBadge(language);
 
             clientId = data.client.id;
             agentId = data.client.assignedAgent?.id || null;
 
-            socket.emit("joinRoom", { userId: clientId });
+            socket.emit("joinRoom", { userId: clientId, language });
             await loadChatHistory();
 
             document.getElementById("chat-screen").classList.remove("hidden");
@@ -355,11 +567,50 @@
           }
         });
 
+      // Close button functionality
+      document.querySelectorAll('.close-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          // Send a message to the parent window to close the iframe
+          try {
+            window.parent.postMessage("close", "*");
+            console.log("Close message sent to parent window");
+            
+            // Instead of hiding the elements, just show the login screen
+            // This keeps the DOM structure intact for reopening
+            showLogin();
+          } catch (error) {
+            console.error("Error sending close message:", error);
+          }
+        });
+      });
+
       function logout() {
-        // Clear the clientUser cookie
-        document.cookie = "clientUser=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        // Redirect to the signup screen
-        showSignup();
+        // Clear the stored data
+        localStorage.removeItem("clientUser");
+        // Redirect to the login screen
+        showLogin();
+      }
+
+      function updateLanguageBadge(language) {
+        const languageBadge = document.getElementById("user-language");
+        if (languageBadge) {
+          // Capitalize first letter of language
+          const displayLanguage = language.charAt(0).toUpperCase() + language.slice(1);
+          languageBadge.textContent = displayLanguage;
+        }
+      }
+
+      // Set chatbot name in all headers
+      function setChatbotName() {
+        if (document.getElementById("chatbot-name")) {
+          document.getElementById("chatbot-name").textContent = chatbotName;
+        }
+        if (document.getElementById("login-chatbot-name")) {
+          document.getElementById("login-chatbot-name").textContent = chatbotName;
+        }
+        if (document.getElementById("signup-chatbot-name")) {
+          document.getElementById("signup-chatbot-name").textContent = chatbotName;
+        }
       }
     </script>
   </body>
