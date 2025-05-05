@@ -23,7 +23,8 @@ const initializeSocket = (server) => {
 
       try {
         // Save message to database
-        const { clientId, agentId, sender, text, timestamp } = messageData;
+        const { clientId, agentId, sender, text, timestamp, isVoiceMessage } =
+          messageData;
 
         let chatSession = await Message.findOne({ clientId, agentId });
         if (!chatSession) {
@@ -37,6 +38,7 @@ const initializeSocket = (server) => {
           sender,
           text,
           timestamp: messageTimestamp,
+          isVoiceMessage: isVoiceMessage || false,
         });
 
         await chatSession.save();

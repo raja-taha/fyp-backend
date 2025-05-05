@@ -97,6 +97,7 @@ const getChatbotWidget = async (req, res) => {
           iframe.style.height = "100%";
           iframe.style.border = "none";
           iframe.style.borderRadius = "10px";
+          iframe.setAttribute("allow", "microphone");
           container.appendChild(iframe);
   
           // Set container dimensions based on window size
