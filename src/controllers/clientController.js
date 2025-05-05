@@ -15,6 +15,7 @@ const clientSignup = async (req, res) => {
     confirmPassword,
     phone,
     chatbotId,
+    language,
   } = req.body;
 
   // Validation checks
@@ -43,7 +44,7 @@ const clientSignup = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new client
+    // Create new client with language
     const newClient = new Client({
       firstName,
       lastName,
@@ -51,6 +52,7 @@ const clientSignup = async (req, res) => {
       password: hashedPassword,
       phone,
       chatbot: chatbotId,
+      language: language || "english", // Use provided language or default to english
     });
 
     await newClient.save();
@@ -60,7 +62,14 @@ const clientSignup = async (req, res) => {
     res.status(201).json({
       message: "Client created successfully",
       token,
-      client: { firstName, lastName, email, phone },
+      client: {
+        id: newClient._id,
+        firstName,
+        lastName,
+        email,
+        phone,
+        language: newClient.language,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -71,7 +80,7 @@ const clientSignup = async (req, res) => {
 // ✅ Client Login & Automatic Agent Assignment
 const clientLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, language } = req.body;
 
     // Find client by email and populate the chatbot field to access createdBy
     const client = await Client.findOne({ email })
@@ -89,6 +98,12 @@ const clientLogin = async (req, res) => {
     const isMatch = await bcrypt.compare(password, client.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Update language if provided
+    if (language && language !== client.language) {
+      client.language = language;
+      await client.save();
     }
 
     // If client has no assigned agent, find one with the least clients
