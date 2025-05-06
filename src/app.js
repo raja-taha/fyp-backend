@@ -47,6 +47,19 @@ app.get("/config.js", (req, res) => {
   );
 });
 
+// Language API route
+app.get("/api/languages", (req, res) => {
+  try {
+    console.log("Languages API endpoint called");
+    const languages = require("./utils/languages");
+    console.log("Languages loaded, keys:", Object.keys(languages));
+    res.json(languages);
+  } catch (error) {
+    console.error("Error in /api/languages endpoint:", error);
+    res.status(500).json({ error: "Failed to load languages" });
+  }
+});
+
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);

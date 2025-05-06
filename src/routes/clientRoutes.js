@@ -6,6 +6,7 @@ const {
   clientLogin,
   getAllClients,
   getClients,
+  updateClientLanguage,
 } = require("../controllers/clientController");
 const { isAdmin, protect } = require("../middlewares/authMiddleware");
 
@@ -14,6 +15,9 @@ router.post("/signup", clientSignup);
 
 // Client login route
 router.post("/login", clientLogin);
+
+// Update client language (public endpoint)
+router.post("/update-language", updateClientLanguage);
 
 // ** Protected Routes (Require Authentication) **
 router.use(protect);

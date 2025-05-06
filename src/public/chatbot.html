@@ -71,6 +71,20 @@
       .agent-message.voice-message-container {
         background-color: rgba(238, 238, 238, 0.9) !important;
       }
+      /* Header language selector */
+      .header-language-selector {
+        margin-left: 10px;
+        display: flex;
+        align-items: center;
+      }
+      .header-language-selector select {
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        background-color: #f5f5f5;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
@@ -81,7 +95,11 @@
           <div class="logo">
             <img src="/robot-logo.svg" alt="Logo">
             <span id="chatbot-name"></span>
-            <span id="user-language" class="language-badge"></span>
+            <div class="header-language-selector">
+              <select id="header-language" onchange="changeLanguage(this.value)">
+                <!-- Will be populated dynamically -->
+              </select>
+            </div>
           </div>
           <button class="close-btn">&times;</button>
         </div>
@@ -118,21 +136,7 @@
           <div class="language-selector">
             <label for="language">Select Language:</label>
             <select id="language" class="input-field">
-              <option value="english">English</option>
-              <option value="spanish">Spanish</option>
-              <option value="french">French</option>
-              <option value="chinese">Chinese</option>
-              <option value="hindi">Hindi</option>
-              <option value="arabic">Arabic</option>
-              <option value="portuguese">Portuguese</option>
-              <option value="bengali">Bengali</option>
-              <option value="russian">Russian</option>
-              <option value="japanese">Japanese</option>
-              <option value="german">German</option>
-              <option value="korean">Korean</option>
-              <option value="italian">Italian</option>
-              <option value="turkish">Turkish</option>
-              <option value="urdu">Urdu</option>
+              <!-- Will be populated dynamically -->
             </select>
           </div>
           <form id="loginForm">
@@ -172,21 +176,7 @@
           <div class="language-selector">
             <label for="signup-language">Select Language:</label>
             <select id="signup-language" class="input-field">
-              <option value="english">English</option>
-              <option value="spanish">Spanish</option>
-              <option value="french">French</option>
-              <option value="chinese">Chinese</option>
-              <option value="hindi">Hindi</option>
-              <option value="arabic">Arabic</option>
-              <option value="portuguese">Portuguese</option>
-              <option value="bengali">Bengali</option>
-              <option value="russian">Russian</option>
-              <option value="japanese">Japanese</option>
-              <option value="german">German</option>
-              <option value="korean">Korean</option>
-              <option value="italian">Italian</option>
-              <option value="turkish">Turkish</option>
-              <option value="urdu">Urdu</option>
+              <!-- Will be populated dynamically -->
             </select>
           </div>
           <form id="signupForm">
@@ -245,8 +235,9 @@
       const socket = io(window.APP_CONFIG.BACKEND_URL);
       let clientId = null;
       let agentId = null;
-      let currentLanguage = "english"; // Default language
+      let currentLanguage = "en"; // Default language as ISO code
       let chatbotName = "LinguistLink"; // Default name until we fetch the real one
+      let languages = {}; // Will store language data
       
       // Voice recording variables
       let mediaRecorder;
@@ -308,6 +299,125 @@
         storeData(name, value);
       }
 
+      // Fetch languages data
+      async function fetchLanguages() {
+        try {
+          const response = await fetch('/api/languages');
+          if (response.ok) {
+            const data = await response.json();
+            languages = data.byCode;
+            populateLanguageDropdowns();
+          } else {
+            console.error("Failed to fetch languages", response.status, response.statusText);
+            // Fallback to some basic languages if API fails
+            languages = {
+              "en": "English", 
+              "es": "Spanish", 
+              "fr": "French",
+              "zh": "Chinese",
+              "hi": "Hindi",
+              "ar": "Arabic"
+            };
+            populateLanguageDropdowns();
+          }
+        } catch (error) {
+          console.error("Error fetching languages:", error);
+          // Fallback to some basic languages if API fails
+          languages = {
+            "en": "English", 
+            "es": "Spanish", 
+            "fr": "French",
+            "zh": "Chinese",
+            "hi": "Hindi",
+            "ar": "Arabic"
+          };
+          populateLanguageDropdowns();
+        }
+      }
+
+      // Populate all language dropdowns with options from languages.js
+      function populateLanguageDropdowns() {
+        const dropdowns = [
+          document.getElementById("header-language"),
+          document.getElementById("language"),
+          document.getElementById("signup-language")
+        ];
+
+        dropdowns.forEach(dropdown => {
+          if (dropdown) {
+            dropdown.innerHTML = ''; // Clear existing options
+            
+            // Add options based on languages object
+            // Handle different possible format structures
+            let languageEntries = [];
+            
+            if (languages.byCode) {
+              // If languages has a byCode property
+              languageEntries = Object.entries(languages.byCode);
+            } else {
+              // If languages is directly the code-to-name mapping
+              languageEntries = Object.entries(languages);
+            }
+            
+            languageEntries.forEach(([code, name]) => {
+              const option = document.createElement("option");
+              option.value = code;
+              option.textContent = name;
+              dropdown.appendChild(option);
+            });
+            
+            // Set the current language
+            dropdown.value = currentLanguage;
+          }
+        });
+        
+        console.log("Language dropdowns populated with", Object.keys(languages).length, "languages");
+      }
+
+      // Update client language
+      async function changeLanguage(languageCode) {
+        if (!clientId || !languageCode || languageCode === currentLanguage) return;
+        
+        try {
+          const response = await fetch('/api/clients/update-language', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientId, language: languageCode })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Update client user data in localStorage
+            const clientUser = getStoredData("clientUser");
+            if (clientUser) {
+              clientUser.language = languageCode;
+              storeData("clientUser", clientUser);
+            }
+            
+            // Update current language
+            currentLanguage = languageCode;
+            storeData("clientLanguage", languageCode);
+            
+            // Update all dropdowns
+            document.querySelectorAll("select").forEach(select => {
+              if (select.id.includes("language")) {
+                select.value = languageCode;
+              }
+            });
+            
+            // Emit language change to socket
+            socket.emit("joinRoom", { userId: clientId, language: languageCode });
+            
+            console.log(`Language updated to ${languages[languageCode]} (${languageCode})`);
+          } else {
+            console.error("Failed to update language");
+          }
+        } catch (error) {
+          console.error("Error updating language:", error);
+        }
+      }
+
       // Fetch chatbot details and set name
       async function fetchChatbotName() {
         try {
@@ -334,21 +444,40 @@
         // Migrate any existing cookies to localStorage
         migrateFromCookies();
         
+        // Initialize with default languages in case API fails
+        languages = {
+          "en": "English", 
+          "es": "Spanish", 
+          "fr": "French",
+          "zh": "Chinese",
+          "hi": "Hindi",
+          "ar": "Arabic"
+        };
+        
+        // Initial population with default languages
+        populateLanguageDropdowns();
+        
         // Fetch and set chatbot name
         fetchChatbotName();
         setChatbotName(); // Set default name initially
+        
+        // Fetch languages and populate dropdowns
+        fetchLanguages();
         
         // Initialize voice recording
         initVoiceRecording();
         
         const clientUser = getStoredData("clientUser");
-        const savedLanguage = getStoredData("clientLanguage") || "english";
+        const savedLanguage = getStoredData("clientLanguage") || "en";
         currentLanguage = savedLanguage;
         
-        // Set the language badge in the header
-        updateLanguageBadge(currentLanguage);
+        console.log("Current language set to:", currentLanguage);
+        console.log("Client user from localStorage:", clientUser);
         
         // Set the language dropdown values
+        if (document.getElementById("header-language")) {
+          document.getElementById("header-language").value = savedLanguage;
+        }
         if (document.getElementById("language")) {
           document.getElementById("language").value = savedLanguage;
         }
@@ -761,7 +890,6 @@
             storeData("clientUser", data.client);
             storeData("clientLanguage", language);
             currentLanguage = language;
-            updateLanguageBadge(language);
 
             clientId = data.client.id;
             agentId = data.client.assignedAgent?.id || null;
@@ -800,15 +928,6 @@
         localStorage.removeItem("clientUser");
         // Redirect to the login screen
         showLogin();
-      }
-
-      function updateLanguageBadge(language) {
-        const languageBadge = document.getElementById("user-language");
-        if (languageBadge) {
-          // Capitalize first letter of language
-          const displayLanguage = language.charAt(0).toUpperCase() + language.slice(1);
-          languageBadge.textContent = displayLanguage;
-        }
       }
 
       // Set chatbot name in all headers

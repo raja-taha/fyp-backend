@@ -7,7 +7,7 @@ const clientSchema = mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     phone: { type: String, required: true },
-    language: { type: String, default: "en" }, // Default language is English
+    language: { type: String, default: "en" }, // Default language is English ISO code
     assignedAgent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

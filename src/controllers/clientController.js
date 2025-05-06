@@ -52,7 +52,7 @@ const clientSignup = async (req, res) => {
       password: hashedPassword,
       phone,
       chatbot: chatbotId,
-      language: language || "english", // Use provided language or default to english
+      language: language || "en", // Use provided language or default to english ISO code
     });
 
     await newClient.save();
@@ -243,4 +243,59 @@ const getClients = async (req, res) => {
   }
 };
 
-module.exports = { clientSignup, clientLogin, getAllClients, getClients };
+// Update Client Language
+const updateClientLanguage = async (req, res) => {
+  try {
+    const { clientId, language } = req.body;
+
+    if (!clientId || !language) {
+      return res
+        .status(400)
+        .json({ message: "Client ID and language are required" });
+    }
+
+    // Import languages list
+    const { byCode } = require("../utils/languages");
+
+    // Validate if the language code exists in our supported languages
+    if (!byCode[language]) {
+      return res.status(400).json({
+        message: "Invalid language code",
+        supportedLanguages: byCode,
+      });
+    }
+
+    // Find and update the client
+    const client = await Client.findById(clientId);
+    if (!client) {
+      return res.status(404).json({ message: "Client not found" });
+    }
+
+    client.language = language;
+    await client.save();
+
+    res.status(200).json({
+      message: `Language updated to ${byCode[language]} (${language})`,
+      client: {
+        id: client._id,
+        firstName: client.firstName,
+        lastName: client.lastName,
+        email: client.email,
+        phone: client.phone,
+        language: client.language,
+        assignedAgent: client.assignedAgent,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating client language:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = {
+  clientSignup,
+  clientLogin,
+  getAllClients,
+  getClients,
+  updateClientLanguage,
+};
