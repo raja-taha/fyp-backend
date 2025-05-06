@@ -261,6 +261,11 @@
       let recordingTimer;
       let isRecording = false;
 
+      // Track if user is manually scrolling
+      let userIsScrolling = false;
+      let lastScrollPosition = 0;
+      let scrollTimeout;
+
       function getStoredData(key) {
         try {
           return JSON.parse(localStorage.getItem(key));
@@ -471,6 +476,21 @@
         }
       }
 
+      // Function to show chat screen and ensure proper scroll position
+      function showChatScreen() {
+        document.getElementById("chat-screen").classList.remove("hidden");
+        document.getElementById("signup-screen").classList.add("hidden");
+        document.getElementById("login-screen").classList.add("hidden");
+        
+        // Reset user scrolling flag when showing chat screen
+        userIsScrolling = false;
+        
+        // Force scroll position after showing the chat screen
+        setTimeout(() => {
+          scrollToBottom(true); // Force scroll regardless of user scrolling state
+        }, 100);
+      }
+
       document.addEventListener("DOMContentLoaded", function () {
         // Migrate any existing cookies to localStorage
         migrateFromCookies();
@@ -497,6 +517,9 @@
 
         // Initialize voice recording
         initVoiceRecording();
+        
+        // Setup auto scroll
+        setupAutoScroll();
 
         const clientUser = getStoredData("clientUser");
         const savedLanguage = getStoredData("clientLanguage") || "en";
@@ -526,10 +549,8 @@
                 language: savedLanguage,
               });
               loadChatHistory();
-              // Ensure the chat screen is displayed
-              document.getElementById("chat-screen").classList.remove("hidden");
-              document.getElementById("signup-screen").classList.add("hidden");
-              document.getElementById("login-screen").classList.add("hidden");
+              // Ensure the chat screen is displayed with proper scrolling
+              showChatScreen();
             } else {
               console.error("Invalid client or agent ID in stored data");
               showLogin();
@@ -543,6 +564,76 @@
         }
       });
 
+      // Forcefully scroll to bottom, guaranteed to work
+      function scrollToBottom(force = false) {
+        const chatbox = document.getElementById("chatbox");
+        if (!chatbox) return;
+        
+        // Don't auto-scroll if user is manually scrolling (unless forced)
+        if (userIsScrolling && !force) return;
+        
+        // Set scroll position with highest priority
+        chatbox.scrollTop = Number.MAX_SAFE_INTEGER; // Ensures we're at the very bottom regardless of height
+      }
+
+      // Set up auto-scroll for all chat interactions
+      function setupAutoScroll() {
+        const chatbox = document.getElementById("chatbox");
+        if (!chatbox) return;
+        
+        // Detect user scrolling
+        chatbox.addEventListener('scroll', () => {
+          // If scroll position changes significantly, user is scrolling
+          if (Math.abs(chatbox.scrollTop - lastScrollPosition) > 10) {
+            userIsScrolling = true;
+            lastScrollPosition = chatbox.scrollTop;
+            
+            // Reset the scrolling flag after user stops scrolling
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+              // Only reset if user is close to bottom (within 100px)
+              const isNearBottom = chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight < 100;
+              if (isNearBottom) {
+                userIsScrolling = false;
+                scrollToBottom();
+              }
+            }, 1000);
+          }
+        });
+        
+        // Force scroll after ANY image loads
+        document.addEventListener('load', function(e) {
+          if (e.target.tagName === 'IMG') {
+            if (!userIsScrolling) scrollToBottom();
+          }
+        }, true);
+        
+        // Force scroll after adding messages, but respect user scrolling
+        const observer = new MutationObserver(() => {
+          if (!userIsScrolling) scrollToBottom();
+        });
+        
+        observer.observe(chatbox, { 
+          childList: true,
+          subtree: true 
+        });
+        
+        // Handle window resize to maintain scroll position
+        window.addEventListener('resize', () => {
+          if (!userIsScrolling) scrollToBottom();
+        });
+        
+        // Set interval to periodically check scroll position (fallback)
+        setInterval(() => {
+          // Only force scroll if we're already near the bottom and user is not actively scrolling
+          const isNearBottom = chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight < 100;
+          if (isNearBottom && !userIsScrolling) {
+            scrollToBottom();
+          }
+        }, 1000);
+      }
+
+      // Load messages and position at bottom immediately
       async function loadChatHistory() {
         if (!clientId || !agentId) return;
         const response = await fetch(
@@ -559,87 +650,94 @@
         ) {
           chatbox.innerHTML =
             "<p class='no-messages'>No messages yet. Start chatting with your agent!</p>";
-        } else {
-          // Group messages by date
-          const messagesByDate = {};
-          const today = new Date().toDateString();
-
-          chatSession.forEach((msg) => {
-            const msgDate = new Date(msg.timestamp).toDateString();
-            if (!messagesByDate[msgDate]) {
-              messagesByDate[msgDate] = [];
-            }
-            messagesByDate[msgDate].push(msg);
-          });
-
-          // Sort dates in chronological order
-          const sortedDates = Object.keys(messagesByDate).sort(
-            (a, b) => new Date(a) - new Date(b)
-          );
-
-          // Render messages grouped by date
-          sortedDates.forEach((date) => {
-            // Add date separator
-            const dateDisplay =
-              date === today ? "Today" : formatDateSeparator(date);
-            chatbox.innerHTML += `<div class="date-separator" data-date="${date}"><span>${dateDisplay}</span></div>`;
-
-            // Add messages for this date
-            messagesByDate[date].forEach((msg) => {
-              const time = new Date(msg.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-              const messageClass =
-                msg.sender === "client" ? "client-message" : "agent-message";
-
-              // Determine which message to display
-              let primaryText, secondaryText;
-
-              if (msg.sender === "agent") {
-                // For agent messages, show translatedText as primary (in client's language)
-                primaryText = msg.translatedText || msg.text;
-                secondaryText = msg.text;
-              } else {
-                // For client messages, show original text as primary
-                primaryText = msg.text;
-                secondaryText = msg.translatedText || msg.text;
-              }
-
-              // Display message with translation toggle
-              chatbox.innerHTML += `
-                <div class="message ${messageClass}${
-                msg.isVoiceMessage ? " voice-message-container" : ""
-              }">
-                  <div class="message-content">
-                    <div class="primary-text">${primaryText}</div>
-                    <div class="secondary-text hidden">${secondaryText}</div>
-                    
-                  </div>
-                 <div class="message-footer">
-              ${
-                primaryText !== secondaryText
-                  ? `<span class="${
-                      msg.sender === "agent"
-                        ? "agent-message-time"
-                        : "client-message-time"
-                    }" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
-                  : `<span style="flex: 1;"></span>`
-              }
-              <span class="${
-                msg.sender === "agent"
-                  ? "agent-message-time"
-                  : "client-message-time"
-              }">${time}</span>
-            </div>
-                </div>
-              `;
-            });
-          });
-
-          // Scroll to bottom of chat
-          chatbox.scrollTop = chatbox.scrollHeight;
+          return;
         }
+
+        // Process and display messages without rendering
+        const fragment = document.createDocumentFragment();
+        const messagesByDate = {};
+        const today = new Date().toDateString();
+
+        chatSession.forEach((msg) => {
+          const msgDate = new Date(msg.timestamp).toDateString();
+          if (!messagesByDate[msgDate]) {
+            messagesByDate[msgDate] = [];
+          }
+          messagesByDate[msgDate].push(msg);
+        });
+
+        // Sort dates in chronological order
+        const sortedDates = Object.keys(messagesByDate).sort(
+          (a, b) => new Date(a) - new Date(b)
+        );
+
+        // Build all HTML in memory before inserting to DOM
+        let htmlContent = '';
+        
+        // Render messages grouped by date
+        sortedDates.forEach((date) => {
+          // Add date separator
+          const dateDisplay =
+            date === today ? "Today" : formatDateSeparator(date);
+          htmlContent += `<div class="date-separator" data-date="${date}"><span>${dateDisplay}</span></div>`;
+
+          // Add messages for this date
+          messagesByDate[date].forEach((msg) => {
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const messageClass =
+              msg.sender === "client" ? "client-message" : "agent-message";
+
+            // Determine which message to display
+            let primaryText, secondaryText;
+
+            if (msg.sender === "agent") {
+              // For agent messages, show translatedText as primary (in client's language)
+              primaryText = msg.translatedText || msg.text;
+              secondaryText = msg.text;
+            } else {
+              // For client messages, show original text as primary
+              primaryText = msg.text;
+              secondaryText = msg.translatedText || msg.text;
+            }
+
+            // Add message to HTML content
+            htmlContent += `
+              <div class="message ${messageClass}${
+              msg.isVoiceMessage ? " voice-message-container" : ""
+            }">
+                <div class="message-content">
+                  <div class="primary-text">${primaryText}</div>
+                  <div class="secondary-text hidden">${secondaryText}</div>
+                </div>
+               <div class="message-footer">
+            ${
+              // Only show "See original" for agent messages, not client messages
+              primaryText !== secondaryText && msg.sender === "agent"
+                ? `<span class="agent-message-time" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
+                : `<span style="flex: 1;"></span>`
+            }
+            <span class="${
+              msg.sender === "agent"
+                ? "agent-message-time"
+                : "client-message-time"
+            }">${time}</span>
+          </div>
+              </div>
+            `;
+          });
+        });
+        
+        // Reset user scrolling flag when loading history
+        userIsScrolling = false;
+        
+        // Insert all content at once to avoid multiple reflows
+        chatbox.innerHTML = htmlContent;
+        
+        // Aggressively force scrolling to bottom
+        scrollToBottom(true); // Force scroll regardless of user scrolling state
       }
 
       // Format date for separator
@@ -779,6 +877,10 @@
           // Send the message via socket.io
           socket.emit("sendMessage", messageData);
           console.log("Message sent:", messageData);
+          
+          // Always force scroll to bottom when user sends a message
+          // This is an intentional user action that should reset scroll position
+          scrollToBottom(true);
         });
 
       socket.on("newMessage", (msg) => {
@@ -825,23 +927,19 @@
         }
 
         // Display message with translation toggle
-        chatbox.innerHTML += `
+        const messageHTML = `
           <div class="message ${messageClass}${
           msg.isVoiceMessage ? " voice-message-container" : ""
         }">
             <div class="message-content">
               <div class="primary-text">${primaryText}</div>
               <div class="secondary-text hidden">${secondaryText}</div>
-              
             </div>
             <div class="message-footer">
               ${
-                primaryText !== secondaryText
-                  ? `<span class="${
-                      msg.sender === "agent"
-                        ? "agent-message-time"
-                        : "client-message-time"
-                    }" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
+                // Only show "See original" for agent messages, not client messages
+                primaryText !== secondaryText && msg.sender === "agent"
+                  ? `<span class="agent-message-time" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
                   : `<span style="flex: 1;"></span>`
               }
               <span class="${
@@ -852,9 +950,21 @@
             </div>
           </div>
         `;
-
-        // Scroll to bottom after new message
-        chatbox.scrollTop = chatbox.scrollHeight;
+        
+        // When receiving a new message, check if we should auto-scroll
+        const shouldScroll = !userIsScrolling || 
+                             // Auto-scroll for user's own messages
+                             msg.sender === "client" ||
+                             // Auto-scroll if user is near bottom
+                             (chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight < 100);
+        
+        // Add the message to the DOM
+        chatbox.innerHTML += messageHTML;
+        
+        // Only force scrolling to the bottom if appropriate
+        if (shouldScroll) {
+          scrollToBottom(msg.sender === "client"); // Force scroll for user's own messages
+        }
       });
 
       function showSignup() {
@@ -997,9 +1107,8 @@
             socket.emit("joinRoom", { userId: clientId, language });
             await loadChatHistory();
 
-            document.getElementById("chat-screen").classList.remove("hidden");
-            document.getElementById("signup-screen").classList.add("hidden");
-            document.getElementById("login-screen").classList.add("hidden");
+            // Show chat screen with proper scrolling
+            showChatScreen();
           } else {
             alert("Login failed. Please check your credentials.");
             console.error("Login failed", response);
@@ -1045,12 +1154,19 @@
         }
       }
 
-      // Add translation toggle function at the end of the script section
+      // Fix toggle translation to prevent scrolling to bottom
       function toggleTranslation(button) {
+        // Set the flag to prevent auto scrolling during this operation
+        userIsScrolling = true;
+        
         // Find the parent message container
         const messageElement = button.closest('.message');
         const primaryText = messageElement.querySelector(".primary-text");
         const secondaryText = messageElement.querySelector(".secondary-text");
+        
+        // Remember the current scroll position
+        const chatbox = document.getElementById("chatbox");
+        const scrollPosition = chatbox.scrollTop;
 
         // Swap visibility
         primaryText.classList.toggle("hidden");
@@ -1062,6 +1178,16 @@
         } else {
           button.textContent = "See original";
         }
+        
+        // Restore scroll position
+        setTimeout(() => {
+          chatbox.scrollTop = scrollPosition;
+          
+          // Reset the scrolling flag after a delay
+          setTimeout(() => {
+            userIsScrolling = false;
+          }, 100);
+        }, 10);
       }
     </script>
   </body>
