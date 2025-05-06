@@ -109,6 +109,8 @@ const sendMessage = async (req, res) => {
     // Create message object with translation data
     const messageObj = {
       sender,
+      clientId,
+      agentId,
       text, // Original text
       translatedText: translationResult.translatedText,
       sourceLanguage: translationResult.sourceLanguage,
@@ -217,6 +219,8 @@ const uploadVoiceMessage = async (req, res) => {
 
       const messageObj = {
         sender,
+        clientId,
+        agentId,
         text: messageText,
         translatedText: messageText, // Same as original for voice messages
         sourceLanguage,

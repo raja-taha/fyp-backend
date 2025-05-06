@@ -14,6 +14,16 @@ const messageSchema = new mongoose.Schema({
   messages: [
     {
       sender: { type: String, enum: ["client", "agent"], required: true }, // Sender type
+      clientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Client",
+        required: true,
+      }, // Add clientId to each message
+      agentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      }, // Add agentId to each message
       text: { type: String, required: true }, // Original message content
       translatedText: { type: String }, // Translated message content
       sourceLanguage: { type: String }, // Source language of the message
