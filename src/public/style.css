@@ -280,3 +280,53 @@ h2 {
   font-weight: 500;
   border-radius: 10px;
 }
+
+/* Translation related styles */
+.message-content {
+  position: relative;
+  flex: 1;
+}
+
+.primary-text, .secondary-text {
+  margin-right: 24px; /* Space for the toggle button */
+}
+
+.secondary-text.hidden {
+  display: none;
+}
+
+.translation-toggle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  transition: opacity 0.3s, color 0.3s;
+}
+
+.translation-toggle:hover {
+  opacity: 1;
+  color: #0084ff;
+}
+
+.client-message .translation-toggle {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.client-message .translation-toggle:hover {
+  color: white;
+}
+
+/* Mark translated text */
+.primary-text::after, .secondary-text::after {
+  content: attr(data-lang);
+  font-size: 0.6rem;
+  opacity: 0.7;
+  margin-left: 4px;
+  vertical-align: super;
+  display: none; /* Hidden by default, can be enabled for debugging */
+}

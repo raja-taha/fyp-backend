@@ -1,5 +1,7 @@
 const socketIo = require("socket.io");
 const Message = require("./models/Message");
+const User = require("./models/User");
+const Client = require("./models/Client");
 
 let io;
 
@@ -14,40 +16,49 @@ const initializeSocket = (server) => {
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    socket.on("joinRoom", ({ userId }) => {
+    socket.on("joinRoom", ({ userId, language }) => {
       socket.join(userId);
+      // Store user's language preference in socket data
+      socket.data.language = language || "en";
     });
 
     socket.on("sendMessage", async (messageData) => {
-      console.log("Message received:", messageData);
-
       try {
-        // Save message to database
+        // Extract message data
         const { clientId, agentId, sender, text, timestamp, isVoiceMessage } =
           messageData;
 
-        let chatSession = await Message.findOne({ clientId, agentId });
-        if (!chatSession) {
-          chatSession = new Message({ clientId, agentId, messages: [] });
+        // Forward the message to the message controller via API
+        // This will handle saving and translation
+
+        const response = await fetch(
+          `${process.env.VITE_PUBLIC_BACKEND_URL || ""}/api/chats/message`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              clientId,
+              agentId,
+              sender,
+              text,
+              timestamp,
+              isVoiceMessage,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          console.error(
+            "Error sending message via API:",
+            await response.text()
+          );
         }
 
-        // Use the provided timestamp if available, otherwise use current time
-        const messageTimestamp = timestamp ? new Date(timestamp) : new Date();
-
-        chatSession.messages.push({
-          sender,
-          text,
-          timestamp: messageTimestamp,
-          isVoiceMessage: isVoiceMessage || false,
-        });
-
-        await chatSession.save();
-
-        // Forward the message to both client and agent rooms
-        io.to(agentId.toString()).emit("newMessage", messageData);
-        io.to(clientId.toString()).emit("newMessage", messageData);
+        // No need to emit messages here as the controller will do that
       } catch (error) {
-        console.error("Error saving message:", error);
+        console.error("Error processing message:", error);
       }
     });
 

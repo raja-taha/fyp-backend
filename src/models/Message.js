@@ -14,7 +14,10 @@ const messageSchema = new mongoose.Schema({
   messages: [
     {
       sender: { type: String, enum: ["client", "agent"], required: true }, // Sender type
-      text: { type: String, required: true }, // Message content
+      text: { type: String, required: true }, // Original message content
+      translatedText: { type: String }, // Translated message content
+      sourceLanguage: { type: String }, // Source language of the message
+      targetLanguage: { type: String }, // Target language (language it was translated to)
       timestamp: { type: Date, default: Date.now }, // Message timestamp
       isVoiceMessage: { type: Boolean, default: false }, // Flag for voice messages
     },

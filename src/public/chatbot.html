@@ -223,7 +223,7 @@
               id="signup-confirm-password"
               class="input-field"
               placeholder="Confirm Password"
-              required
+              required 
             />
             <input
               type="text"
@@ -424,9 +424,31 @@
             messagesByDate[date].forEach(msg => {
               const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
               const messageClass = msg.sender === "client" ? "client-message" : "agent-message";
+              
+              // Determine which message to display
+              let primaryText, secondaryText;
+              
+              if (msg.sender === "agent") {
+                // For agent messages, show translatedText as primary (in client's language)
+                primaryText = msg.translatedText || msg.text;
+                secondaryText = msg.text;
+              } else {
+                // For client messages, show original text as primary
+                primaryText = msg.text;
+                secondaryText = msg.translatedText || msg.text;
+              }
+              
+              // Display message with translation toggle
               chatbox.innerHTML += `
                 <div class="message ${messageClass}${msg.isVoiceMessage ? ' voice-message-container' : ''}">
-                  ${msg.text}
+                  <div class="message-content">
+                    <div class="primary-text">${primaryText}</div>
+                    <div class="secondary-text hidden">${secondaryText}</div>
+                    ${primaryText !== secondaryText ? 
+                      `<button class="translation-toggle" onclick="toggleTranslation(this)">
+                        <i class="fas fa-language"></i>
+                      </button>` : ''}
+                  </div>
                   <span class="message-time">${time}</span>
                 </div>
               `;
@@ -559,7 +581,7 @@
             agentId, 
             sender: "client", 
             text,
-            timestamp: new Date().toISOString() 
+            timestamp: new Date().toISOString()
           };
 
           // Clear input field
@@ -568,10 +590,6 @@
           // Send the message via socket.io
           socket.emit("sendMessage", messageData);
           console.log("Message sent:", messageData);
-
-          // No need to make a separate fetch POST request
-          // The server socket handler will broadcast the message
-          // and we'll see it via the newMessage event
         });
 
       socket.on("newMessage", (msg) => {
@@ -597,10 +615,30 @@
         const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         const messageClass = msg.sender === "client" ? "client-message" : "agent-message";
         
-        // Display the message appropriately based on whether it's a voice message
+        // Determine which message to display
+        let primaryText, secondaryText;
+        
+        if (msg.sender === "agent") {
+          // For agent messages, show translatedText as primary (in client's language)
+          primaryText = msg.translatedText || msg.text;
+          secondaryText = msg.text;
+        } else {
+          // For client messages, show original text as primary
+          primaryText = msg.text;
+          secondaryText = msg.translatedText || msg.text;
+        }
+        
+        // Display message with translation toggle
         chatbox.innerHTML += `
           <div class="message ${messageClass}${msg.isVoiceMessage ? ' voice-message-container' : ''}">
-            ${msg.text}
+            <div class="message-content">
+              <div class="primary-text">${primaryText}</div>
+              <div class="secondary-text hidden">${secondaryText}</div>
+              ${primaryText !== secondaryText ? 
+                `<button class="translation-toggle" onclick="toggleTranslation(this)">
+                  <i class="fas fa-language"></i>
+                </button>` : ''}
+            </div>
             <span class="message-time">${time}</span>
           </div>
         `;
@@ -783,6 +821,27 @@
         }
         if (document.getElementById("signup-chatbot-name")) {
           document.getElementById("signup-chatbot-name").textContent = chatbotName;
+        }
+      }
+
+      // Add translation toggle function at the end of the script section
+      function toggleTranslation(button) {
+        const messageContent = button.parentElement;
+        const primaryText = messageContent.querySelector('.primary-text');
+        const secondaryText = messageContent.querySelector('.secondary-text');
+        
+        // Swap visibility
+        primaryText.classList.toggle('hidden');
+        secondaryText.classList.toggle('hidden');
+        
+        // Change button icon to indicate state
+        const icon = button.querySelector('i');
+        if (primaryText.classList.contains('hidden')) {
+          icon.className = 'fas fa-language';
+          button.title = 'Show original message';
+        } else {
+          icon.className = 'fas fa-language';
+          button.title = 'Show translated message';
         }
       }
     </script>

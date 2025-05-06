@@ -181,9 +181,9 @@ const getChatbotWidget = async (req, res) => {
           
           // Listen for close message from iframe
           window.addEventListener("message", function(event) {
-            console.log("Message received from iframe:", event.data);
+            
             if (event.data === "close") {
-              console.log("Close message received, hiding container");
+              
               closeChatbot();
             }
           });
