@@ -18,6 +18,10 @@ const userSchema = mongoose.Schema(
       enum: ["Active", "Not Active", "Busy"],
       default: "Not Active",
     },
+    language: {
+      type: String,
+      default: "en",
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

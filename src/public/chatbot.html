@@ -1,103 +1,1194 @@
+<!-- Modified HTML (chatbot.html) -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${chatbot.name || "LinguistLink"}</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .chatbot-container { width: 350px; border: 1px solid #ccc; border-radius: 8px; padding: 20px; }
-        .hidden { display: none; }
-        .input-field { width: 100%; padding: 8px; margin: 5px 0; }
-        .button { width: 100%; padding: 10px; background: blue; color: white; border: none; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <div class="chatbot-container">
-        <div id="chat-screen">
-            <h3>Chatbot</h3>
-            <div id="chatbox"></div>
-            <form id="messageForm">
-                <input type="text" id="chat-input" class="input-field" placeholder="Type a message...">
-                <button type="submit" class="button">Send</button>
-            </form>
-            <button class="button" onclick="logout()" style="background: red;">Logout</button>
-        </div>
-    </div>
-    <script src="/config.js"></script>
+    <!-- Add a script to define chatbotId globally -->
     <script>
-        const socket = io(window.APP_CONFIG.BACKEND_URL);
-        let clientId = null;
-        let agentId = null;
-
-        function getCookie(name) {
-            const cookies = document.cookie.split("; ");
-            for (let cookie of cookies) {
-                let [key, value] = cookie.split("=");
-                if (key === name) return decodeURIComponent(value);
-            }
-            return null;
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            const clientUserCookie = getCookie("clientUser");
-            if (clientUserCookie) {
-                try {
-                    const clientUser = JSON.parse(clientUserCookie);
-                    clientId = clientUser.id;
-                    agentId = clientUser.assignedAgent?.id || null;
-                    if (clientId && agentId) {
-                        socket.emit("joinRoom", { userId: clientId });
-                        loadChatHistory();
-                    }
-                } catch (error) {
-                    console.error("Error parsing clientUser cookie:", error);
-                }
-            }
-        });
-
-        async function loadChatHistory() {
-            if (!clientId || !agentId) return;
-            const response = await fetch(`/api/chats/messages?clientId=${clientId}&agentId=${agentId}`);
-            const chatSession = await response.json();
-
-            const chatbox = document.getElementById("chatbox");
-            chatbox.innerHTML = "";
-
-            chatSession.forEach(msg => {
-                chatbox.innerHTML += `<p><b>${msg.sender === "client" ? "You" : "Agent"}:</b> ${msg.text}</p>`;
-            });
-        }
-
-        document.getElementById("messageForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const messageInput = document.getElementById("chat-input");
-            const text = messageInput.value.trim();
-            if (!text || !clientId || !agentId) return;
-
-            const messageData = { clientId, agentId, sender: "client", text };
-
-            // document.getElementById("chatbox").innerHTML += `<p><b>You:</b> ${text}</p>`;
-            messageInput.value = "";
-
-            socket.emit("sendMessage", messageData);
-            console.log(messageData);
-            
-            try {
-                await fetch("/api/chats/message", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(messageData),
-                });
-            } catch (error) {
-                console.error("Error:", error);
-            }
-        });
-
-        socket.on("newMessage", (msg) => {
-            document.getElementById("chatbox").innerHTML += `<p><b>${msg.sender === "client" ? "You" : "Agent"}:</b> ${msg.text}</p>`;
-        });
+      // This will be replaced by the server with the actual chatbotId
+      window.APP_CONFIG = {
+        CHATBOT_ID: "${chatbotId}",
+        BACKEND_URL: window.location.origin,
+      };
     </script>
-</body>
+    <link rel="stylesheet" href="/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      /* Voice recording styles */
+      .mic-btn {
+        background: none;
+        border: none;
+        color: #505050;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 8px;
+        transition: color 0.3s;
+      }
+      .mic-btn:hover {
+        color: #0084ff;
+      }
+      .mic-btn.recording {
+        color: #ff3b30;
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+      .recording-timer {
+        font-size: 0.8rem;
+        color: #ff3b30;
+        margin-left: 8px;
+        display: none;
+      }
+      .recording-timer.active {
+        display: inline-block;
+      }
+      .voice-message {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
+      }
+      .voice-message audio {
+        max-width: 200px;
+        height: 40px;
+      }
+      .voice-controls {
+        display: flex;
+        align-items: center;
+      }
+      .voice-message-container {
+        background-color: rgba(43, 127, 255, 0.9) !important;
+      }
+      .voice-message-container audio {
+        border-radius: 8px;
+        outline: none;
+      }
+      .agent-message.voice-message-container {
+        background-color: rgba(238, 238, 238, 0.9) !important;
+      }
+      /* Header language selector */
+      .header-language-selector {
+        margin-left: 10px;
+        display: flex;
+        align-items: center;
+      }
+      .header-language-selector select {
+        width: 100px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        background-color: #f5f5f5;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chatbot-container">
+      <!-- Chat Screen -->
+      <div id="chat-screen" class="hidden">
+        <div class="header">
+          <div class="logo">
+            <img src="/robot-logo.svg" alt="Logo" />
+            <span id="chatbot-name"></span>
+            <div class="header-language-selector">
+              <select
+                id="header-language"
+                onchange="changeLanguage(this.value)"
+              >
+                <!-- Will be populated dynamically -->
+              </select>
+            </div>
+          </div>
+          <button class="close-btn">&times;</button>
+        </div>
+        <div id="chatbox"></div>
+        <form id="message-form">
+          <div class="voice-controls">
+            <button type="button" id="voice-record-btn" class="mic-btn">
+              <i class="fas fa-microphone"></i>
+            </button>
+            <span id="recording-timer" class="recording-timer">0:00</span>
+          </div>
+          <input
+            type="text"
+            id="chat-input"
+            placeholder="Type your message here..."
+          />
+          <button type="submit" id="send-button">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- Login Screen -->
+      <div id="login-screen">
+        <div class="header">
+          <div class="logo">
+            <img src="/robot-logo.svg" alt="Logo" />
+            <span id="login-chatbot-name"></span>
+          </div>
+          <button class="close-btn">&times;</button>
+        </div>
+        <div class="login-container">
+          <h2>Login</h2>
+          <div class="language-selector">
+            <label for="language">Select Language:</label>
+            <select id="language" class="input-field">
+              <!-- Will be populated dynamically -->
+            </select>
+          </div>
+          <form id="loginForm">
+            <input
+              type="email"
+              id="login-email"
+              class="input-field"
+              placeholder="Email"
+              required
+            />
+            <input
+              type="password"
+              id="login-password"
+              class="input-field"
+              placeholder="Password"
+              required
+            />
+            <button type="submit" class="button">Login</button>
+          </form>
+          <p class="link-text">
+            Don't have an account?
+            <a class="link" onclick="showSignup()">Sign Up</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Signup Screen -->
+      <div id="signup-screen" class="hidden">
+        <div class="header">
+          <div class="logo">
+            <img src="/robot-logo.svg" alt="Logo" />
+            <span id="signup-chatbot-name"></span>
+          </div>
+          <button class="close-btn">&times;</button>
+        </div>
+        <div class="signup-container">
+          <h2>Signup</h2>
+          <div class="language-selector">
+            <label for="signup-language">Select Language:</label>
+            <select id="signup-language" class="input-field">
+              <!-- Will be populated dynamically -->
+            </select>
+          </div>
+        <form id="signupForm">
+            <input
+              type="email"
+              id="signup-email"
+              class="input-field"
+              placeholder="Email"
+              required
+            />
+          <input
+            type="text"
+            id="signup-firstname"
+            class="input-field"
+            placeholder="First Name"
+            required
+          />
+          <input
+            type="text"
+            id="signup-lastname"
+            class="input-field"
+            placeholder="Last Name"
+            required
+          />
+          <input
+            type="password"
+            id="signup-password"
+            class="input-field"
+            placeholder="Password"
+            required
+          />
+          <input
+            type="password"
+            id="signup-confirm-password"
+            class="input-field"
+            placeholder="Confirm Password"
+            required
+          />
+          <input
+            type="text"
+            id="signup-phone"
+            class="input-field"
+              placeholder="Phone Number"
+            required
+          />
+            <button type="submit" class="button">Signup</button>
+        </form>
+          <p class="link-text">
+            Already have an account?
+            <a class="link" onclick="showLogin()">Login</a>
+          </p>
+      </div>
+      </div>
+    </div>
+
+    <script>
+      const socket = io(window.APP_CONFIG.BACKEND_URL);
+      let clientId = null;
+      let agentId = null;
+      let currentLanguage = "en"; // Default language as ISO code
+      let chatbotName = "LinguistLink"; // Default name until we fetch the real one
+      let languages = {}; // Will store language data
+
+      // Voice recording variables
+      let mediaRecorder;
+      let audioChunks = [];
+      let recordingStartTime;
+      let recordingTimer;
+      let isRecording = false;
+
+      // Track if user is manually scrolling
+      let userIsScrolling = false;
+      let lastScrollPosition = 0;
+      let scrollTimeout;
+
+      function getStoredData(key) {
+        try {
+          return JSON.parse(localStorage.getItem(key));
+        } catch (error) {
+          console.error(`Error retrieving ${key} from localStorage:`, error);
+          return null;
+        }
+      }
+
+      function storeData(key, value) {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (error) {
+          console.error(`Error storing ${key} in localStorage:`, error);
+        }
+      }
+
+      // For backward compatibility - migrate any existing cookies to localStorage
+      function migrateFromCookies() {
+        const clientUserCookie = getCookie("clientUser");
+        const savedLanguage = getCookie("clientLanguage");
+
+        if (clientUserCookie && !getStoredData("clientUser")) {
+          try {
+            storeData("clientUser", JSON.parse(clientUserCookie));
+            // Clear the old cookie
+            document.cookie =
+              "clientUser=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          } catch (e) {
+            console.error("Error migrating client user cookie:", e);
+          }
+        }
+
+        if (savedLanguage && !getStoredData("clientLanguage")) {
+          storeData("clientLanguage", savedLanguage);
+          // Clear the old cookie
+          document.cookie =
+            "clientLanguage=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        }
+      }
+
+      function getCookie(name) {
+        const cookies = document.cookie.split("; ");
+        for (let cookie of cookies) {
+          let [key, value] = cookie.split("=");
+          if (key === name) return decodeURIComponent(value);
+        }
+        return null;
+      }
+
+      function setCookie(name, value, days) {
+        // Store in localStorage instead
+        storeData(name, value);
+      }
+
+      // Fetch languages data
+      async function fetchLanguages() {
+        try {
+          const response = await fetch("/api/languages");
+          if (response.ok) {
+            const data = await response.json();
+            languages = data.byCode;
+            populateLanguageDropdowns();
+          } else {
+            console.error(
+              "Failed to fetch languages",
+              response.status,
+              response.statusText
+            );
+            // Fallback to some basic languages if API fails
+            languages = {
+              en: "English",
+              es: "Spanish",
+              fr: "French",
+              zh: "Chinese",
+              hi: "Hindi",
+              ar: "Arabic",
+            };
+            populateLanguageDropdowns();
+          }
+        } catch (error) {
+          console.error("Error fetching languages:", error);
+          // Fallback to some basic languages if API fails
+          languages = {
+            en: "English",
+            es: "Spanish",
+            fr: "French",
+            zh: "Chinese",
+            hi: "Hindi",
+            ar: "Arabic",
+          };
+          populateLanguageDropdowns();
+        }
+      }
+
+      // Populate all language dropdowns with options from languages.js
+      function populateLanguageDropdowns() {
+        const dropdowns = [
+          document.getElementById("header-language"),
+          document.getElementById("language"),
+          document.getElementById("signup-language"),
+        ];
+
+        dropdowns.forEach((dropdown) => {
+          if (dropdown) {
+            dropdown.innerHTML = ""; // Clear existing options
+
+            // Add options based on languages object
+            // Handle different possible format structures
+            let languageEntries = [];
+
+            if (languages.byCode) {
+              // If languages has a byCode property
+              languageEntries = Object.entries(languages.byCode);
+            } else {
+              // If languages is directly the code-to-name mapping
+              languageEntries = Object.entries(languages);
+            }
+
+            languageEntries.forEach(([code, name]) => {
+              const option = document.createElement("option");
+              option.value = code;
+              option.textContent = name;
+              dropdown.appendChild(option);
+            });
+
+            // Set the current language
+            dropdown.value = currentLanguage;
+          }
+        });
+
+        console.log(
+          "Language dropdowns populated with",
+          Object.keys(languages).length,
+          "languages"
+        );
+      }
+
+      // Update client language
+      async function changeLanguage(languageCode) {
+        if (!clientId || !languageCode || languageCode === currentLanguage)
+          return;
+
+        try {
+          const response = await fetch("/api/clients/update-language", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ clientId, language: languageCode }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+
+            // Update client user data in localStorage
+            const clientUser = getStoredData("clientUser");
+            if (clientUser) {
+              clientUser.language = languageCode;
+              storeData("clientUser", clientUser);
+            }
+
+            // Update current language
+            currentLanguage = languageCode;
+            storeData("clientLanguage", languageCode);
+
+            // Update all dropdowns
+            document.querySelectorAll("select").forEach((select) => {
+              if (select.id.includes("language")) {
+                select.value = languageCode;
+              }
+            });
+
+            // Emit language change to socket
+            socket.emit("joinRoom", {
+              userId: clientId,
+              language: languageCode,
+            });
+
+            console.log(
+              `Language updated to ${languages[languageCode]} (${languageCode})`
+            );
+          } else {
+            console.error("Failed to update language");
+          }
+        } catch (error) {
+          console.error("Error updating language:", error);
+        }
+      }
+
+      // Fetch chatbot details and set name
+      async function fetchChatbotName() {
+        try {
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID;
+          if (!chatbotId || chatbotId.includes("${")) {
+            console.error("Invalid chatbotId format:", chatbotId);
+            return;
+          }
+
+          const response = await fetch(`/api/chatbots/public/${chatbotId}`);
+          if (response.ok) {
+            const data = await response.json();
+            chatbotName = data.name || "LinguistLink";
+            setChatbotName();
+          } else {
+            console.error("Failed to fetch chatbot details");
+          }
+        } catch (error) {
+          console.error("Error fetching chatbot details:", error);
+        }
+      }
+
+      // Function to show chat screen and ensure proper scroll position
+      function showChatScreen() {
+        document.getElementById("chat-screen").classList.remove("hidden");
+        document.getElementById("signup-screen").classList.add("hidden");
+        document.getElementById("login-screen").classList.add("hidden");
+        
+        // Reset user scrolling flag when showing chat screen
+        userIsScrolling = false;
+        
+        // Force scroll position after showing the chat screen
+        setTimeout(() => {
+          scrollToBottom(true); // Force scroll regardless of user scrolling state
+        }, 100);
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        // Migrate any existing cookies to localStorage
+        migrateFromCookies();
+
+        // Initialize with default languages in case API fails
+        languages = {
+          en: "English",
+          es: "Spanish",
+          fr: "French",
+          zh: "Chinese",
+          hi: "Hindi",
+          ar: "Arabic",
+        };
+
+        // Initial population with default languages
+        populateLanguageDropdowns();
+
+        // Fetch and set chatbot name
+        fetchChatbotName();
+        setChatbotName(); // Set default name initially
+
+        // Fetch languages and populate dropdowns
+        fetchLanguages();
+
+        // Initialize voice recording
+        initVoiceRecording();
+        
+        // Setup auto scroll
+        setupAutoScroll();
+
+        const clientUser = getStoredData("clientUser");
+        const savedLanguage = getStoredData("clientLanguage") || "en";
+        currentLanguage = savedLanguage;
+
+        console.log("Current language set to:", currentLanguage);
+        console.log("Client user from localStorage:", clientUser);
+
+        // Set the language dropdown values
+        if (document.getElementById("header-language")) {
+          document.getElementById("header-language").value = savedLanguage;
+        }
+        if (document.getElementById("language")) {
+          document.getElementById("language").value = savedLanguage;
+        }
+        if (document.getElementById("signup-language")) {
+          document.getElementById("signup-language").value = savedLanguage;
+        }
+
+        if (clientUser) {
+          try {
+            clientId = clientUser.id;
+            agentId = clientUser.assignedAgent?.id || null;
+            if (clientId && agentId) {
+              socket.emit("joinRoom", {
+                userId: clientId,
+                language: savedLanguage,
+              });
+              loadChatHistory();
+              // Ensure the chat screen is displayed with proper scrolling
+              showChatScreen();
+            } else {
+              console.error("Invalid client or agent ID in stored data");
+              showLogin();
+            }
+          } catch (error) {
+            console.error("Error parsing stored client user data:", error);
+            showLogin();
+          }
+        } else {
+          showLogin();
+        }
+      });
+
+      // Forcefully scroll to bottom, guaranteed to work
+      function scrollToBottom(force = false) {
+        const chatbox = document.getElementById("chatbox");
+        if (!chatbox) return;
+        
+        // Don't auto-scroll if user is manually scrolling (unless forced)
+        if (userIsScrolling && !force) return;
+        
+        // Set scroll position with highest priority
+        chatbox.scrollTop = Number.MAX_SAFE_INTEGER; // Ensures we're at the very bottom regardless of height
+      }
+
+      // Set up auto-scroll for all chat interactions
+      function setupAutoScroll() {
+        const chatbox = document.getElementById("chatbox");
+        if (!chatbox) return;
+        
+        // Detect user scrolling
+        chatbox.addEventListener('scroll', () => {
+          // If scroll position changes significantly, user is scrolling
+          if (Math.abs(chatbox.scrollTop - lastScrollPosition) > 10) {
+            userIsScrolling = true;
+            lastScrollPosition = chatbox.scrollTop;
+            
+            // Reset the scrolling flag after user stops scrolling
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+              // Only reset if user is close to bottom (within 100px)
+              const isNearBottom = chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight < 100;
+              if (isNearBottom) {
+                userIsScrolling = false;
+                scrollToBottom();
+              }
+            }, 1000);
+          }
+        });
+        
+        // Force scroll after ANY image loads
+        document.addEventListener('load', function(e) {
+          if (e.target.tagName === 'IMG') {
+            if (!userIsScrolling) scrollToBottom();
+          }
+        }, true);
+        
+        // Force scroll after adding messages, but respect user scrolling
+        const observer = new MutationObserver(() => {
+          if (!userIsScrolling) scrollToBottom();
+        });
+        
+        observer.observe(chatbox, { 
+          childList: true,
+          subtree: true 
+        });
+        
+        // Handle window resize to maintain scroll position
+        window.addEventListener('resize', () => {
+          if (!userIsScrolling) scrollToBottom();
+        });
+        
+        // Set interval to periodically check scroll position (fallback)
+        setInterval(() => {
+          // Only force scroll if we're already near the bottom and user is not actively scrolling
+          const isNearBottom = chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight < 100;
+          if (isNearBottom && !userIsScrolling) {
+            scrollToBottom();
+          }
+        }, 1000);
+      }
+
+      // Load messages and position at bottom immediately
+      async function loadChatHistory() {
+        if (!clientId || !agentId) return;
+        const response = await fetch(
+          `/api/chats/messages?clientId=${clientId}&agentId=${agentId}`
+        );
+        const chatSession = await response.json();
+
+        const chatbox = document.getElementById("chatbox");
+        chatbox.innerHTML = "";
+
+        if (
+          chatSession.message === "No messages found" ||
+          chatSession.length === 0
+        ) {
+          chatbox.innerHTML =
+            "<p class='no-messages'>No messages yet. Start chatting with your agent!</p>";
+          return;
+        }
+
+        // Process and display messages without rendering
+        const fragment = document.createDocumentFragment();
+        const messagesByDate = {};
+        const today = new Date().toDateString();
+
+        chatSession.forEach((msg) => {
+          const msgDate = new Date(msg.timestamp).toDateString();
+          if (!messagesByDate[msgDate]) {
+            messagesByDate[msgDate] = [];
+          }
+          messagesByDate[msgDate].push(msg);
+        });
+
+        // Sort dates in chronological order
+        const sortedDates = Object.keys(messagesByDate).sort(
+          (a, b) => new Date(a) - new Date(b)
+        );
+
+        // Build all HTML in memory before inserting to DOM
+        let htmlContent = '';
+        
+        // Render messages grouped by date
+        sortedDates.forEach((date) => {
+          // Add date separator
+          const dateDisplay =
+            date === today ? "Today" : formatDateSeparator(date);
+          htmlContent += `<div class="date-separator" data-date="${date}"><span>${dateDisplay}</span></div>`;
+
+          // Add messages for this date
+          messagesByDate[date].forEach((msg) => {
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const messageClass =
+              msg.sender === "client" ? "client-message" : "agent-message";
+
+            // Determine which message to display
+            let primaryText, secondaryText;
+
+            if (msg.sender === "agent") {
+              // For agent messages, show translatedText as primary (in client's language)
+              primaryText = msg.translatedText || msg.text;
+              secondaryText = msg.text;
+        } else {
+              // For client messages, show original text as primary
+              primaryText = msg.text;
+              secondaryText = msg.translatedText || msg.text;
+            }
+
+            // Add message to HTML content
+            htmlContent += `
+              <div class="message ${messageClass}${
+              msg.isVoiceMessage ? " voice-message-container" : ""
+            }">
+                <div class="message-content">
+                  <div class="primary-text">${primaryText}</div>
+                  <div class="secondary-text hidden">${secondaryText}</div>
+                </div>
+               <div class="message-footer">
+            ${
+              // Only show "See original" for agent messages, not client messages
+              primaryText !== secondaryText && msg.sender === "agent"
+                ? `<span class="agent-message-time" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
+                : `<span style="flex: 1;"></span>`
+            }
+            <span class="${
+              msg.sender === "agent"
+                ? "agent-message-time"
+                : "client-message-time"
+            }">${time}</span>
+          </div>
+              </div>
+            `;
+          });
+        });
+        
+        // Reset user scrolling flag when loading history
+        userIsScrolling = false;
+        
+        // Insert all content at once to avoid multiple reflows
+        chatbox.innerHTML = htmlContent;
+        
+        // Aggressively force scrolling to bottom
+        scrollToBottom(true); // Force scroll regardless of user scrolling state
+      }
+
+      // Format date for separator
+      function formatDateSeparator(dateString) {
+        const date = new Date(dateString);
+        const options = { weekday: "short", month: "short", day: "numeric" };
+        return date.toLocaleDateString(undefined, options);
+      }
+
+      // Initialize voice recording functionality
+      function initVoiceRecording() {
+        const recordButton = document.getElementById("voice-record-btn");
+        const recordingTimerElement =
+          document.getElementById("recording-timer");
+
+        // Request microphone access
+        recordButton.addEventListener("click", async () => {
+          if (!isRecording) {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+              });
+              startRecording(stream);
+              recordButton.classList.add("recording");
+              recordingTimerElement.classList.add("active");
+              isRecording = true;
+
+              // Start recording timer
+              recordingStartTime = Date.now();
+              recordingTimer = setInterval(updateRecordingTimer, 1000);
+            } catch (error) {
+              console.error("Error accessing microphone:", error);
+              alert(
+                "Unable to access your microphone. Please check your browser permissions."
+              );
+            }
+          } else {
+            stopRecording();
+            recordButton.classList.remove("recording");
+            recordingTimerElement.classList.remove("active");
+            isRecording = false;
+            clearInterval(recordingTimer);
+          }
+        });
+      }
+
+      function startRecording(stream) {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.addEventListener("dataavailable", (event) => {
+          audioChunks.push(event.data);
+        });
+
+        mediaRecorder.addEventListener("stop", async () => {
+          // Convert audio chunks to blob
+          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+
+          // Create FormData and append audio blob
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "recording.webm");
+          formData.append("clientId", clientId);
+          formData.append("agentId", agentId);
+          formData.append("sender", "client");
+          formData.append("timestamp", new Date().toISOString());
+          formData.append("saveMessage", "true");
+
+          try {
+            // Upload the audio file
+            const response = await fetch("/api/chats/voice-message", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to upload voice message");
+            }
+
+            const result = await response.json();
+
+            // We don't need to send a separate socket message as the server will handle it
+            console.log("Voice message uploaded successfully:", result);
+          } catch (error) {
+            console.error("Error sending voice message:", error);
+            alert("Failed to send voice message. Please try again.");
+          }
+
+          // Stop all tracks on the stream to release the microphone
+          mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+        });
+
+        // Start recording
+        mediaRecorder.start();
+      }
+
+      function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+      }
+
+      function updateRecordingTimer() {
+        const elapsedSeconds = Math.floor(
+          (Date.now() - recordingStartTime) / 1000
+        );
+        const minutes = Math.floor(elapsedSeconds / 60);
+        const seconds = elapsedSeconds % 60;
+        document.getElementById(
+          "recording-timer"
+        ).textContent = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+        // Auto-stop recording after 2 minutes
+        if (elapsedSeconds >= 120) {
+          document.getElementById("voice-record-btn").click();
+        }
+      }
+
+      document
+        .getElementById("message-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const messageInput = document.getElementById("chat-input");
+          const text = messageInput.value.trim();
+          if (!text || !clientId || !agentId) return;
+
+          const messageData = {
+            clientId,
+            agentId,
+            sender: "client",
+            text,
+            timestamp: new Date().toISOString(),
+          };
+
+          // Clear input field
+          messageInput.value = "";
+
+          // Send the message via socket.io
+          socket.emit("sendMessage", messageData);
+          console.log("Message sent:", messageData);
+          
+          // Always force scroll to bottom when user sends a message
+          // This is an intentional user action that should reset scroll position
+          scrollToBottom(true);
+        });
+
+      socket.on("newMessage", (msg) => {
+        const chatbox = document.getElementById("chatbox");
+
+        // Remove the "no messages" message if it exists
+        const noMessagesElement = chatbox.querySelector(".no-messages");
+        if (noMessagesElement) {
+          noMessagesElement.remove();
+        }
+
+        const msgDate = new Date(msg.timestamp).toDateString();
+        const today = new Date().toDateString();
+
+        // Check if we need to add a date separator by looking for existing one with same date
+        const existingSeparator = chatbox.querySelector(
+          `.date-separator[data-date="${msgDate}"]`
+        );
+
+        if (!existingSeparator) {
+          const dateDisplay =
+            msgDate === today ? "Today" : formatDateSeparator(msgDate);
+          chatbox.innerHTML += `<div class="date-separator" data-date="${msgDate}"><span>${dateDisplay}</span></div>`;
+        }
+
+        const time = new Date(msg.timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const messageClass =
+          msg.sender === "client" ? "client-message" : "agent-message";
+
+        // Determine which message to display
+        let primaryText, secondaryText;
+
+        if (msg.sender === "agent") {
+          // For agent messages, show translatedText as primary (in client's language)
+          primaryText = msg.translatedText || msg.text;
+          secondaryText = msg.text;
+        } else {
+          // For client messages, show original text as primary
+          primaryText = msg.text;
+          secondaryText = msg.translatedText || msg.text;
+        }
+
+        // Display message with translation toggle
+        const messageHTML = `
+          <div class="message ${messageClass}${
+          msg.isVoiceMessage ? " voice-message-container" : ""
+        }">
+            <div class="message-content">
+              <div class="primary-text">${primaryText}</div>
+              <div class="secondary-text hidden">${secondaryText}</div>
+            </div>
+            <div class="message-footer">
+              ${
+                // Only show "See original" for agent messages, not client messages
+                primaryText !== secondaryText && msg.sender === "agent"
+                  ? `<span class="agent-message-time" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
+                  : `<span style="flex: 1;"></span>`
+              }
+              <span class="${
+                msg.sender === "agent"
+                  ? "agent-message-time"
+                  : "client-message-time"
+              }">${time}</span>
+            </div>
+          </div>
+        `;
+        
+        // When receiving a new message, check if we should auto-scroll
+        const shouldScroll = !userIsScrolling || 
+                             // Auto-scroll for user's own messages
+                             msg.sender === "client" ||
+                             // Auto-scroll if user is near bottom
+                             (chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight < 100);
+        
+        // Add the message to the DOM
+        chatbox.innerHTML += messageHTML;
+        
+        // Only force scrolling to the bottom if appropriate
+        if (shouldScroll) {
+          scrollToBottom(msg.sender === "client"); // Force scroll for user's own messages
+        }
+      });
+
+      function showSignup() {
+        // Transfer the selected language from login to signup
+        const loginLanguage = document.getElementById("language").value;
+        document.getElementById("signup-screen").classList.remove("hidden");
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("chat-screen").classList.add("hidden");
+
+        // Set the language dropdown to match the login screen
+        document.getElementById("signup-language").value = loginLanguage;
+      }
+
+      function showLogin() {
+        // Transfer the selected language from signup to login
+        const signupLanguage =
+          document.getElementById("signup-language")?.value;
+        document.getElementById("signup-screen").classList.add("hidden");
+        document.getElementById("login-screen").classList.remove("hidden");
+        document.getElementById("chat-screen").classList.add("hidden");
+
+        // Set the language dropdown to match the signup screen if it exists
+        if (signupLanguage) {
+          document.getElementById("language").value = signupLanguage;
+        }
+      }
+
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("signup-email").value.trim();
+          const firstName = document
+            .getElementById("signup-firstname")
+            .value.trim();
+          const lastName = document
+            .getElementById("signup-lastname")
+            .value.trim();
+          const password = document
+            .getElementById("signup-password")
+            .value.trim();
+          const confirmPassword = document
+            .getElementById("signup-confirm-password")
+            .value.trim();
+          const phone = document.getElementById("signup-phone").value.trim();
+          const language = document.getElementById("signup-language").value;
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID;
+
+          if (
+            !firstName ||
+            !lastName ||
+            !email ||
+            !password ||
+            !confirmPassword ||
+            !phone ||
+            !chatbotId
+          ) {
+            alert("All fields are required");
+            return;
+          }
+
+          if (password !== confirmPassword) {
+            alert("Passwords do not match");
+            return;
+          }
+
+          if (!chatbotId) {
+            console.error("ChatbotId is undefined");
+            return;
+          }
+
+          const response = await fetch("/api/clients/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              firstName,
+              lastName,
+              email,
+              password,
+              confirmPassword,
+              phone,
+              chatbotId,
+              language,
+            }),
+          });
+
+          if (response.ok) {
+            // Store the language preference but don't auto-login
+            storeData("clientLanguage", language);
+
+            // Clear signup form
+            document.getElementById("signup-email").value = "";
+            document.getElementById("signup-firstname").value = "";
+            document.getElementById("signup-lastname").value = "";
+            document.getElementById("signup-password").value = "";
+            document.getElementById("signup-confirm-password").value = "";
+            document.getElementById("signup-phone").value = "";
+
+            // Show success message and redirect to login
+            alert("Signup successful! Please login with your credentials.");
+
+            // Populate the login email field with the email they just registered with
+            document.getElementById("login-email").value = email;
+
+            // Redirect to login screen
+            showLogin();
+          } else {
+            const error = await response.json();
+            alert(error.message || "Signup failed. Please try again.");
+            console.error("Signup failed", error);
+          }
+        });
+
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("login-email").value.trim();
+          const password = document
+            .getElementById("login-password")
+            .value.trim();
+          const language = document.getElementById("language").value;
+          const chatbotId = window.APP_CONFIG.CHATBOT_ID;
+
+          const response = await fetch("/api/clients/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, chatbotId, language }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            storeData("clientUser", data.client);
+            storeData("clientLanguage", language);
+            currentLanguage = language;
+
+            clientId = data.client.id;
+            agentId = data.client.assignedAgent?.id || null;
+
+            socket.emit("joinRoom", { userId: clientId, language });
+            await loadChatHistory();
+
+            // Show chat screen with proper scrolling
+            showChatScreen();
+          } else {
+            alert("Login failed. Please check your credentials.");
+            console.error("Login failed", response);
+          }
+        });
+
+      // Close button functionality
+      document.querySelectorAll(".close-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+          // Send a message to the parent window to close the iframe
+          try {
+            window.parent.postMessage("close", "*");
+            console.log("Close message sent to parent window");
+
+            // Instead of hiding the elements, just show the login screen
+            // This keeps the DOM structure intact for reopening
+            showLogin();
+          } catch (error) {
+            console.error("Error sending close message:", error);
+          }
+        });
+        });
+
+      function logout() {
+        // Clear the stored data
+        localStorage.removeItem("clientUser");
+        // Redirect to the login screen
+        showLogin();
+      }
+
+      // Set chatbot name in all headers
+      function setChatbotName() {
+        if (document.getElementById("chatbot-name")) {
+          document.getElementById("chatbot-name").textContent = chatbotName;
+        }
+        if (document.getElementById("login-chatbot-name")) {
+          document.getElementById("login-chatbot-name").textContent =
+            chatbotName;
+        }
+        if (document.getElementById("signup-chatbot-name")) {
+          document.getElementById("signup-chatbot-name").textContent =
+            chatbotName;
+        }
+      }
+
+      // Fix toggle translation to prevent scrolling to bottom
+      function toggleTranslation(button) {
+        // Set the flag to prevent auto scrolling during this operation
+        userIsScrolling = true;
+        
+        // Find the parent message container
+        const messageElement = button.closest('.message');
+        const primaryText = messageElement.querySelector(".primary-text");
+        const secondaryText = messageElement.querySelector(".secondary-text");
+        
+        // Remember the current scroll position
+        const chatbox = document.getElementById("chatbox");
+        const scrollPosition = chatbox.scrollTop;
+
+        // Swap visibility
+        primaryText.classList.toggle("hidden");
+        secondaryText.classList.toggle("hidden");
+        
+        // Update the toggle text
+        if (primaryText.classList.contains("hidden")) {
+          button.textContent = "See translation";
+        } else {
+          button.textContent = "See original";
+        }
+        
+        // Restore scroll position
+        setTimeout(() => {
+          chatbox.scrollTop = scrollPosition;
+          
+          // Reset the scrolling flag after a delay
+          setTimeout(() => {
+            userIsScrolling = false;
+          }, 100);
+        }, 10);
+      }
+    </script>
+  </body>
 </html>
