@@ -104,6 +104,7 @@ const loginUser = async (req, res) => {
         username: user.username,
         status: user.status,
         role: user.role,
+        language: user.language,
       },
     });
   } catch (error) {

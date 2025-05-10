@@ -193,7 +193,7 @@
               <!-- Will be populated dynamically -->
             </select>
           </div>
-          <form id="signupForm">
+        <form id="signupForm">
             <input
               type="email"
               id="signup-email"
@@ -201,48 +201,48 @@
               placeholder="Email"
               required
             />
-            <input
-              type="text"
-              id="signup-firstname"
-              class="input-field"
-              placeholder="First Name"
-              required
-            />
-            <input
-              type="text"
-              id="signup-lastname"
-              class="input-field"
-              placeholder="Last Name"
-              required
-            />
-            <input
-              type="password"
-              id="signup-password"
-              class="input-field"
-              placeholder="Password"
-              required
-            />
-            <input
-              type="password"
-              id="signup-confirm-password"
-              class="input-field"
-              placeholder="Confirm Password"
-              required
-            />
-            <input
-              type="text"
-              id="signup-phone"
-              class="input-field"
+          <input
+            type="text"
+            id="signup-firstname"
+            class="input-field"
+            placeholder="First Name"
+            required
+          />
+          <input
+            type="text"
+            id="signup-lastname"
+            class="input-field"
+            placeholder="Last Name"
+            required
+          />
+          <input
+            type="password"
+            id="signup-password"
+            class="input-field"
+            placeholder="Password"
+            required
+          />
+          <input
+            type="password"
+            id="signup-confirm-password"
+            class="input-field"
+            placeholder="Confirm Password"
+            required
+          />
+          <input
+            type="text"
+            id="signup-phone"
+            class="input-field"
               placeholder="Phone Number"
-              required
-            />
+            required
+          />
             <button type="submit" class="button">Signup</button>
-          </form>
+        </form>
           <p class="link-text">
             Already have an account?
             <a class="link" onclick="showLogin()">Login</a>
           </p>
-        </div>
+      </div>
       </div>
     </div>
 
@@ -697,7 +697,7 @@
               // For agent messages, show translatedText as primary (in client's language)
               primaryText = msg.translatedText || msg.text;
               secondaryText = msg.text;
-            } else {
+        } else {
               // For client messages, show original text as primary
               primaryText = msg.text;
               secondaryText = msg.translatedText || msg.text;
@@ -1130,7 +1130,7 @@
             console.error("Error sending close message:", error);
           }
         });
-      });
+        });
 
       function logout() {
         // Clear the stored data

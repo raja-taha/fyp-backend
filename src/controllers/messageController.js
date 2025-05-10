@@ -5,6 +5,7 @@ const { getIo } = require("../socket"); // Import the socket instance
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
+const FormData = require("form-data");
 
 const PYTHON_MICROSERVICE_URL =
   process.env.PYTHON_MICROSERVICE_URL || "http://0.0.0.0:8000";
@@ -43,6 +44,55 @@ async function translateMessage(text, targetLanguage, sourceLanguage) {
       translatedText: text,
       sourceLanguage: sourceLanguage || "unknown",
       targetLanguage: targetLanguage,
+    };
+  }
+}
+
+/**
+ * Transcribes and translates voice message using the Python microservice
+ * @param {string} audioFilePath - Path to the audio file
+ * @param {string} targetLanguage - Target language code
+ * @returns {Promise<Object>} - Transcription and translation result
+ */
+async function transcribeVoiceMessage(audioFilePath, targetLanguage) {
+  try {
+    if (!audioFilePath) {
+      throw new Error("Audio file path is required");
+    }
+
+    const formData = new FormData();
+    formData.append("audio", fs.createReadStream(audioFilePath));
+    formData.append("target_lang", targetLanguage || "en");
+
+    const response = await axios.post(
+      `${PYTHON_MICROSERVICE_URL}/transcribe`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      }
+    );
+
+    return {
+      transcript: response.data.transcript || "",
+      translation: response.data.translation || "",
+      sourceLanguage:
+        response.data.source_language ||
+        response.data.detected_language ||
+        "unknown",
+      targetLanguage: response.data.target_language || targetLanguage,
+    };
+  } catch (error) {
+    console.error("Voice transcription error:", error.message);
+    // Return empty results if transcription fails
+    return {
+      transcript: "",
+      translation: "",
+      sourceLanguage: "unknown",
+      targetLanguage: targetLanguage || "en",
     };
   }
 }
@@ -184,49 +234,59 @@ const uploadVoiceMessage = async (req, res) => {
     // Generate the URL for the uploaded audio file
     const audioUrl = `/uploads/voice-messages/${req.file.filename}`;
 
+    // Get the client and agent to determine their languages
+    const client = await Client.findById(clientId);
+    const agent = await User.findById(agentId);
+
+    if (!client || !agent) {
+      return res.status(404).json({ error: "Client or agent not found" });
+    }
+
+    // Get languages from models
+    const clientLanguage = client.language || "en";
+    const agentLanguage = agent.language || "en";
+
+    // Determine source and target language based on sender
+    let targetLanguage;
+    if (sender === "agent") {
+      targetLanguage = clientLanguage;
+    } else {
+      targetLanguage = agentLanguage;
+    }
+
+    // Process the voice message with Python microservice for transcription and translation
+    const transcriptionResult = await transcribeVoiceMessage(
+      req.file.path,
+      targetLanguage
+    );
+
     // If saveMessage is true, save the message directly to the database
-    if (saveMessage === "true") {
-      const messageText = `<div class="voice-message"><audio controls src="${audioUrl}"></audio></div>`;
+    if (saveMessage === "true" || saveMessage === true) {
       const messageTimestamp = timestamp ? new Date(timestamp) : new Date();
-
-      // Get the client and agent to determine their languages
-      const client = await Client.findById(clientId);
-      const agent = await User.findById(agentId);
-
-      if (!client || !agent) {
-        return res.status(404).json({ error: "Client or agent not found" });
-      }
-
-      // Get languages from models
-      const clientLanguage = client.language || "en";
-      const agentLanguage = agent.language || "en";
 
       let chatSession = await Message.findOne({ clientId, agentId });
       if (!chatSession) {
         chatSession = new Message({ clientId, agentId, messages: [] });
       }
 
-      // For voice messages, we don't translate the audio content
-      // but we add translation fields for consistency
-      let sourceLanguage, targetLanguage;
-      if (sender === "agent") {
-        sourceLanguage = agentLanguage;
-        targetLanguage = clientLanguage;
-      } else {
-        sourceLanguage = clientLanguage;
-        targetLanguage = agentLanguage;
-      }
+      // Create a message with the audio and transcription/translation
+      const messageText = `<div class="voice-message">
+        <audio controls src="${audioUrl}"></audio>
+        <div class="transcript">${transcriptionResult.transcript}</div>
+      </div>`;
 
       const messageObj = {
         sender,
         clientId,
         agentId,
         text: messageText,
-        translatedText: messageText, // Same as original for voice messages
-        sourceLanguage,
-        targetLanguage,
+        translatedText: transcriptionResult.translation,
+        transcript: transcriptionResult.transcript,
+        sourceLanguage: transcriptionResult.sourceLanguage,
+        targetLanguage: transcriptionResult.targetLanguage,
         timestamp: messageTimestamp,
         isVoiceMessage: true,
+        audioUrl: audioUrl,
       };
 
       chatSession.messages.push(messageObj);
@@ -238,14 +298,18 @@ const uploadVoiceMessage = async (req, res) => {
       io.to(clientId.toString()).emit("newMessage", messageObj);
     }
 
-    // Return the audio URL for the client to use
+    // Return the audio URL, transcription, and translation for the client to use
     res.status(201).json({
-      message: "Voice message uploaded successfully",
+      message: "Voice message processed successfully",
       audioUrl,
+      transcript: transcriptionResult.transcript,
+      translation: transcriptionResult.translation,
+      sourceLanguage: transcriptionResult.sourceLanguage,
+      targetLanguage: transcriptionResult.targetLanguage,
       isVoiceMessage: true,
     });
   } catch (error) {
-    console.error("Error uploading voice message:", error);
+    console.error("Error processing voice message:", error);
 
     // Delete the uploaded file if there was an error
     if (req.file && req.file.path) {
