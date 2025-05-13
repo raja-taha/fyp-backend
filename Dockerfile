@@ -1,5 +1,4 @@
-# Use Node.js LTS (Long Term Support) as the base image
-FROM node:18-alpine
+FROM node:lts
 
 # Set working directory
 WORKDIR /app
@@ -8,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install
 
 # Copy the rest of the code
 COPY . .
@@ -20,4 +19,4 @@ RUN mkdir -p src/public/uploads
 EXPOSE 5000
 
 # Command to run the application
-CMD ["npm", "start"]
+CMD ["npm", "run", "start"]
