@@ -16,7 +16,7 @@ COPY . .
 RUN mkdir -p src/public/uploads
 
 # Expose the port the app runs on
-EXPOSE 6000
+EXPOSE 3000
 
 # Command to run the application
 CMD ["npm", "run", "start"]
