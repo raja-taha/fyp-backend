@@ -270,16 +270,10 @@ const uploadVoiceMessage = async (req, res) => {
       }
 
       // Create a message with the audio and transcription/translation
-      // For client messages, don't include the transcript text in the HTML
-      const messageText =
-        sender === "client"
-          ? `<div class="voice-message">
-            <audio controls src="${audioUrl}"></audio>
-          </div>`
-          : `<div class="voice-message">
-            <audio controls src="${audioUrl}"></audio>
-            <div class="transcript">${transcriptionResult.transcript}</div>
-          </div>`;
+      const messageText = `<div class="voice-message">
+        <audio controls src="${audioUrl}"></audio>
+        <div class="transcript">${transcriptionResult.transcript}</div>
+      </div>`;
 
       const messageObj = {
         sender,
