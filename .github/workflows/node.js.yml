@@ -1,28 +1,30 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Node.js CI/CD
+name: Deploy Backend Application
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
-    runs-on: self-hosted
-    strategy:
-      matrix:
-        node-version: [22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: |
-        touch .env
-        echo "${{ secrets.PROD_ENV_FILE }}" > .env
-        
+      - name: Checkout Source
+        uses: actions/checkout@v4
+      - name: Login to docker hub
+        run: docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} -p ${{ secrets.DOCKER_HUB_PASSWORD }}
+      - name: Build Docker Image
+        run: docker build -t rajataha/fyp-backend .
+      - name: Publish Image to Docker Hub
+        run: docker push rajataha/fyp-backend:latest
+
+  deploy:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Pull Image from Docker Hub
+        run: docker pull rajataha/fyp-backend:latest
+      - name: Delete old container
+        run: docker rm -f fyp-backend
+      - name: Run Docker Container
+        run: docker run -d -p 5000:5000 --name fyp-backend -e NODE_ENV=${{ secrets.NODE_ENV }} -e MONGO_URI=${{ secrets.MONGO_URI }} -e DB_NAME=${{ secrets.DB_NAME }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }} -e PORT=${{ secrets.PORT }} -e VITE_PUBLIC_BACKEND_URL=${{ secrets.VITE_PUBLIC_BACKEND_URL }} -e SOCKET_IO_PORT=${{ secrets.SOCKET_IO_PORT }} rajataha/fyp-backend:latest
