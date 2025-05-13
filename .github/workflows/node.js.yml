@@ -27,4 +27,4 @@ jobs:
       - name: Delete old container
         run: docker rm -f fyp-backend
       - name: Run Docker Container
-        run: docker run -d -p 5000:5000 --name fyp-backend -e NODE_ENV=${{ secrets.NODE_ENV }} -e MONGO_URI=${{ secrets.MONGO_URI }} -e DB_NAME=${{ secrets.DB_NAME }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }} -e PORT=${{ secrets.PORT }} -e VITE_PUBLIC_BACKEND_URL=${{ secrets.VITE_PUBLIC_BACKEND_URL }} rajataha/fyp-backend:latest
+        run: docker run -d -p 5000:5000 --name fyp-backend -e NODE_ENV=${{ secrets.NODE_ENV }} -e MONGO_URI=${{ secrets.MONGO_URI }} -e DB_NAME=${{ secrets.DB_NAME }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }} -e PORT=${{ secrets.PORT }} -e PROTOCOL=${{ secrets.PROTOCOL }} -e HOSTNAME=${{ secrets.HOSTNAME }} -e PORT=${{ secrets.PORT }} rajataha/fyp-backend:latest

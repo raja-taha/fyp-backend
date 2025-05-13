@@ -11,7 +11,10 @@ connectDB();
 const server = http.createServer(app);
 initializeSocket(server); // Initialize Socket.io
 
-const PORT = process.env.PORT || 5000;
+const PROTOCOL = process.env.PROTOCOL || "http";
+const HOSTNAME = process.env.HOSTNAME || "localhost";
+const PORT = process.env.PORT || 6000;
+
 server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on ${PROTOCOL}://${HOSTNAME}:${PORT}`);
 });

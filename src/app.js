@@ -38,11 +38,15 @@ app.get("/", (req, res) => {
   res.send(htmlResponse);
 });
 
+const PROTOCOL = process.env.PROTOCOL || "http";
+const HOSTNAME = process.env.HOSTNAME || "localhost";
+const PORT = process.env.PORT || 5000;
+
 app.get("/config.js", (req, res) => {
   res.setHeader("Content-Type", "application/javascript");
   res.send(
     `window.APP_CONFIG = { BACKEND_URL: "${
-      process.env.VITE_PUBLIC_BACKEND_URL || "http://localhost:5000"
+      `${PROTOCOL}://${HOSTNAME}:${PORT}` || "http://localhost:6000"
     }" };`
   );
 });

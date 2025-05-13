@@ -91,9 +91,15 @@ const initializeSocket = (server) => {
           }
         }
 
+        const PROTOCOL = process.env.PROTOCOL || "http";
+        const HOSTNAME = process.env.HOSTNAME || "localhost";
+        const PORT = process.env.PORT || 6000;
+
         // Forward the message to the message controller via API
         const response = await fetch(
-          `${process.env.VITE_PUBLIC_BACKEND_URL || ""}/api/chats/message`,
+          `${
+            `${PROTOCOL}://${HOSTNAME}:${PORT}` || "http://localhost:6000"
+          }/api/chats/message`,
           {
             method: "POST",
             headers: {
