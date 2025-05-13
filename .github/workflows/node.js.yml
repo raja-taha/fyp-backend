@@ -25,6 +25,8 @@ jobs:
       - name: Pull Image from Docker Hub
         run: docker pull rajataha/fyp-backend:latest
       - name: Delete old container
+        run: docker rm -f fyp-backend
+      - name: Delete old container
         run: docker rm -f fyp-backend-container
       - name: Run Docker Container
         run: docker run -d -p 6000:6000 --name fyp-backend-container -e NODE_ENV='${{ secrets.NODE_ENV }}' -e MONGO_URI='${{ secrets.MONGO_URI }}' -e DB_NAME='${{ secrets.DB_NAME }}' -e JWT_SECRET='${{ secrets.JWT_SECRET }}' -e JWT_EXPIRES_IN='${{ secrets.JWT_EXPIRES_IN }}' -e PORT='${{ secrets.PORT }}' -e PROTOCOL='${{ secrets.PROTOCOL }}' -e HOSTNAME='${{ secrets.HOSTNAME }}' -e PORT='${{ secrets.PORT }}' rajataha/fyp-backend:latest
