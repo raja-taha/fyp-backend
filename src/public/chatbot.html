@@ -692,15 +692,31 @@
 
             // Determine which message to display
             let primaryText, secondaryText;
+            let showTranslationToggle = false;
 
             if (msg.sender === "agent") {
               // For agent messages, show translatedText as primary (in client's language)
               primaryText = msg.translatedText || msg.text;
               secondaryText = msg.text;
-        } else {
+              showTranslationToggle = primaryText !== secondaryText;
+            } else {
               // For client messages, show original text as primary
-              primaryText = msg.text;
+              // For client voice messages, we don't want to show the transcript
+              if (msg.isVoiceMessage) {
+                // For client voice messages, replace any existing transcript with just the audio player
+                const audioRegex = /<audio[^>]*src="([^"]*)"[^>]*><\/audio>/;
+                const audioMatch = msg.text.match(audioRegex);
+                if (audioMatch && audioMatch[1]) {
+                  primaryText = `<div class="voice-message"><audio controls src="${audioMatch[1]}"></audio></div>`;
+                } else {
+                  primaryText = msg.text;
+                }
+              } else {
+                primaryText = msg.text;
+              }
               secondaryText = msg.translatedText || msg.text;
+              // Don't show translation toggle for client messages, especially voice messages
+              showTranslationToggle = false;
             }
 
             // Add message to HTML content
@@ -714,8 +730,8 @@
                 </div>
                <div class="message-footer">
             ${
-              // Only show "See original" for agent messages, not client messages
-              primaryText !== secondaryText && msg.sender === "agent"
+              // Only show "See original" for agent messages with different translations
+              showTranslationToggle
                 ? `<span class="agent-message-time" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
                 : `<span style="flex: 1;"></span>`
             }
@@ -915,15 +931,31 @@
 
         // Determine which message to display
         let primaryText, secondaryText;
+        let showTranslationToggle = false;
 
         if (msg.sender === "agent") {
           // For agent messages, show translatedText as primary (in client's language)
           primaryText = msg.translatedText || msg.text;
           secondaryText = msg.text;
+          showTranslationToggle = primaryText !== secondaryText;
         } else {
           // For client messages, show original text as primary
-          primaryText = msg.text;
+          // For client voice messages, we don't want to show the transcript
+          if (msg.isVoiceMessage) {
+            // For client voice messages, replace any existing transcript with just the audio player
+            const audioRegex = /<audio[^>]*src="([^"]*)"[^>]*><\/audio>/;
+            const audioMatch = msg.text.match(audioRegex);
+            if (audioMatch && audioMatch[1]) {
+              primaryText = `<div class="voice-message"><audio controls src="${audioMatch[1]}"></audio></div>`;
+            } else {
+              primaryText = msg.text;
+            }
+          } else {
+            primaryText = msg.text;
+          }
           secondaryText = msg.translatedText || msg.text;
+          // Don't show translation toggle for client messages, especially voice messages
+          showTranslationToggle = false;
         }
 
         // Display message with translation toggle
@@ -937,8 +969,8 @@
             </div>
             <div class="message-footer">
               ${
-                // Only show "See original" for agent messages, not client messages
-                primaryText !== secondaryText && msg.sender === "agent"
+                // Only show "See original" for agent messages with different translations
+                showTranslationToggle
                   ? `<span class="agent-message-time" onclick="toggleTranslation(this)" style="cursor:pointer;">See original</span>`
                   : `<span style="flex: 1;"></span>`
               }

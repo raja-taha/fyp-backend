@@ -103,7 +103,7 @@ const getChatbotWidget = async (req, res) => {
           // Set container dimensions based on window size
           if (window.innerWidth > 768) {
             container.style.width = "400px";
-            container.style.height = "600px";
+            container.style.height = "800px";
           } else {
             container.style.width = "100%";
             container.style.height = "100%";

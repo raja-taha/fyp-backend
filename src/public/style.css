@@ -7,6 +7,9 @@ body {
 /* Chatbot Main Container - Positioned fixed */
 .chatbot-container {
   width: 360px;
+  min-height: 400px;
+  max-height: 80vh; /* Limit maximum height to 80% of viewport height */
+  height: auto; /* Allow container to adjust based on content */
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);

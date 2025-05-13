@@ -171,9 +171,7 @@ const getAllClients = async (req, res) => {
 
     // If no agents found under this admin
     if (!agents.length) {
-      return res
-        .status(404)
-        .json({ message: "No agents found under this admin" });
+      return res.status(200).json({ totalClients: 0, clients: [] });
     }
 
     const agentIds = agents.map((agent) => agent._id); // Extract agent IDs
