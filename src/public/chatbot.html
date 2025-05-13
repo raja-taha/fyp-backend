@@ -704,12 +704,18 @@
               // For client voice messages, we don't want to show the transcript
               if (msg.isVoiceMessage) {
                 // For client voice messages, replace any existing transcript with just the audio player
-                const audioRegex = /<audio[^>]*src="([^"]*)"[^>]*><\/audio>/;
-                const audioMatch = msg.text.match(audioRegex);
-                if (audioMatch && audioMatch[1]) {
-                  primaryText = `<div class="voice-message"><audio controls src="${audioMatch[1]}"></audio></div>`;
+                if (msg.audioUrl) {
+                  // If we have a direct audioUrl property, use it
+                  primaryText = `<div class="voice-message"><audio controls src="${msg.audioUrl}"></audio></div>`;
                 } else {
-                  primaryText = msg.text;
+                  // Otherwise try to extract from the text content
+                  const audioRegex = /<audio[^>]*src="([^"]*)"[^>]*><\/audio>/;
+                  const audioMatch = msg.text.match(audioRegex);
+                  if (audioMatch && audioMatch[1]) {
+                    primaryText = `<div class="voice-message"><audio controls src="${audioMatch[1]}"></audio></div>`;
+                  } else {
+                    primaryText = msg.text;
+                  }
                 }
               } else {
                 primaryText = msg.text;
@@ -943,12 +949,18 @@
           // For client voice messages, we don't want to show the transcript
           if (msg.isVoiceMessage) {
             // For client voice messages, replace any existing transcript with just the audio player
-            const audioRegex = /<audio[^>]*src="([^"]*)"[^>]*><\/audio>/;
-            const audioMatch = msg.text.match(audioRegex);
-            if (audioMatch && audioMatch[1]) {
-              primaryText = `<div class="voice-message"><audio controls src="${audioMatch[1]}"></audio></div>`;
+            if (msg.audioUrl) {
+              // If we have a direct audioUrl property, use it
+              primaryText = `<div class="voice-message"><audio controls src="${msg.audioUrl}"></audio></div>`;
             } else {
-              primaryText = msg.text;
+              // Otherwise try to extract from the text content
+              const audioRegex = /<audio[^>]*src="([^"]*)"[^>]*><\/audio>/;
+              const audioMatch = msg.text.match(audioRegex);
+              if (audioMatch && audioMatch[1]) {
+                primaryText = `<div class="voice-message"><audio controls src="${audioMatch[1]}"></audio></div>`;
+              } else {
+                primaryText = msg.text;
+              }
             }
           } else {
             primaryText = msg.text;
