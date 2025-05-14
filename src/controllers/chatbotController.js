@@ -4,10 +4,6 @@ const Chatbot = require("../models/Chatbot");
 const fs = require("fs");
 const path = require("path");
 
-const PROTOCOL = process.env.PROTOCOL || "http";
-const HOSTNAME = process.env.HOSTNAME || "localhost";
-const PORT = process.env.PORT || 6000;
-
 const createChatbot = async (req, res) => {
   const { chatbotName, description } = req.body;
   if (!chatbotName) {
@@ -96,7 +92,7 @@ const getChatbotWidget = async (req, res) => {
           // Create iframe for the chatbot content
           const iframe = document.createElement("iframe");
           iframe.id = "chatbot-iframe";
-          iframe.src = "${PROTOCOL}://${HOSTNAME}:${PORT}/api/chatbots/view?chatbot_id=${chatbotId}";
+          iframe.src = "${process.env.VITE_PUBLIC_BACKEND_URL}/api/chatbots/view?chatbot_id=${chatbotId}";
           iframe.style.width = "100%";
           iframe.style.height = "100%";
           iframe.style.border = "none";
@@ -171,7 +167,7 @@ const getChatbotWidget = async (req, res) => {
                 if (storedUser) {
                   // If we have a stored user, just make sure the iframe is loaded
                   if (!iframe.src || iframe.src === "about:blank") {
-                    iframe.src = "${PROTOCOL}://${HOSTNAME}:${PORT}/api/chatbots/view?chatbot_id=${chatbotId}";
+                    iframe.src = "${process.env.VITE_PUBLIC_BACKEND_URL}/api/chatbots/view?chatbot_id=${chatbotId}";
                   }
                 }
               }
@@ -241,7 +237,7 @@ const getChatbotScript = async (req, res) => {
         var s = document.createElement("script");
         s.type = "text/javascript";
         s.async = true;
-        s.src = "${PROTOCOL}://${HOSTNAME}:${PORT}/api/chatbots/widget?chatbot_id=${chatbot._id}";
+        s.src = "${process.env.VITE_PUBLIC_BACKEND_URL}/api/chatbots/widget?chatbot_id=${chatbot._id}";
         document.head.appendChild(s);
       </script>`;
 

@@ -22,11 +22,9 @@ jobs:
     needs: build
     runs-on: self-hosted
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
       - name: Pull Image from Docker Hub
         run: docker pull rajataha/fyp-backend:latest
       - name: Delete old container
         run: docker rm -f fyp-backend-container
       - name: Run Docker Container
-        run: docker run -d -p 3000:3000 --name fyp-backend-container -e NODE_ENV='${{ secrets.NODE_ENV }}' -e MONGO_URI='${{ secrets.MONGO_URI }}' -e DB_NAME='${{ secrets.DB_NAME }}' -e JWT_SECRET='${{ secrets.JWT_SECRET }}' -e JWT_EXPIRES_IN='${{ secrets.JWT_EXPIRES_IN }}' -e PORT='${{ secrets.PORT }}' -e PROTOCOL='${{ secrets.PROTOCOL }}' -e HOSTNAME='${{ secrets.HOSTNAME }}' -e PORT='${{ secrets.PORT }}' rajataha/fyp-backend
+        run: docker run -d -p 3000:3000 --name fyp-backend-container -e NODE_ENV='${{ secrets.NODE_ENV }}' -e MONGO_URI='${{ secrets.MONGO_URI }}' -e DB_NAME='${{ secrets.DB_NAME }}' -e JWT_SECRET='${{ secrets.JWT_SECRET }}' -e JWT_EXPIRES_IN='${{ secrets.JWT_EXPIRES_IN }}' -e PORT='${{ secrets.PORT }}' -e VITE_PUBLIC_BACKEND_URL='${{ secrets.VITE_PUBLIC_BACKEND_URL }}' -e PYTHON_MICROSERVICE_URL='${{ secrets.PYTHON_MICROSERVICE_URL }}' rajataha/fyp-backend
