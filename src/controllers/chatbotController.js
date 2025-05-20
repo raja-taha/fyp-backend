@@ -367,6 +367,54 @@ const getPublicChatbotInfo = async (req, res) => {
   }
 };
 
+const editChatbot = async (req, res) => {
+  try {
+    const { chatbotId } = req.params;
+    const { chatbotName, description } = req.body;
+
+    // Check if at least one field is provided
+    if (!chatbotName && !description) {
+      return res.status(400).json({
+        message:
+          "At least one field (chatbotName or description) must be provided for update",
+      });
+    }
+
+    // Find the chatbot
+    const chatbot = await Chatbot.findById(chatbotId);
+    if (!chatbot) {
+      return res.status(404).json({ message: "Chatbot not found" });
+    }
+
+    // Check if admin owns the chatbot
+    if (chatbot.createdBy.toString() !== req.user.userId) {
+      return res
+        .status(403)
+        .json({ message: "You can only edit your own chatbots" });
+    }
+
+    // Create update object with only provided fields
+    const updateData = {};
+    if (chatbotName) updateData.name = chatbotName;
+    if (description) updateData.description = description;
+
+    // Update the chatbot
+    const updatedChatbot = await Chatbot.findByIdAndUpdate(
+      chatbotId,
+      updateData,
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Chatbot updated successfully",
+      chatbot: updatedChatbot,
+    });
+  } catch (error) {
+    console.error("Error updating chatbot:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createChatbot,
   getChatbots,
@@ -377,4 +425,5 @@ module.exports = {
   getChatbotById,
   getChatbotByAdmin,
   getPublicChatbotInfo,
+  editChatbot,
 };

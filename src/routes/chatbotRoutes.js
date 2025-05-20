@@ -9,6 +9,7 @@ const {
   createChatbot,
   getChatbotByAdmin,
   getPublicChatbotInfo,
+  editChatbot,
 } = require("../controllers/chatbotController");
 const {
   isSuperAdmin,
@@ -32,6 +33,7 @@ router.get("/getChatbotBtId/:chatbotId", getChatbotById);
 router.get("/admin-chatbot", protect, isAdmin, getChatbotByAdmin);
 
 router.post("/create", isAdmin, createChatbot);
+router.put("/edit/:chatbotId", isAdmin, editChatbot);
 router.get("/", isSuperAdmin, getChatbots);
 
 module.exports = router;
